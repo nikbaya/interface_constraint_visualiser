@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interface Constraint Visualiser</title>
+<meta name="description" content="How depleted of missense variation are protein-protein interface residues? Search a protein and explore interface constraint and its interacting partners.">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/layout.css">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="#/"><span class="brand-mark"></span> Interface Constraint Visualiser</a>
+    <form id="search-form" autocomplete="off">
+      <input id="search" list="gene-list" placeholder="Search a gene (e.g. TP53, GRIN2B, CREBBP)" aria-label="Search a gene">
+      <datalist id="gene-list"></datalist>
+    </form>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- Landing -->
+  <section id="landing">
+    <div class="hero">
+      <h1>Are protein <em>interface</em> residues more constrained?</h1>
+      <p class="lede">
+        Residues that sit at a protein&ndash;protein interface tend to be depleted of
+        missense variation in gnomAD. Search a protein to see its interface vs.
+        non-interface missense constraint (<strong>misOEUF</strong> &mdash; lower means more
+        constrained) and the interface constraint of its structural partners.
+      </p>
+    </div>
+    <h2 class="section-title">Proteins, ranked by interface depletion significance</h2>
+    <div id="card-grid" class="card-grid"></div>
+  </section>
+
+  <!-- Protein view -->
+  <section id="protein" hidden>
+    <a class="back" href="#/">&larr; all proteins</a>
+    <div id="protein-header"></div>
+
+    <h2 class="panel-title">Interface vs. non-interface constraint</h2>
+    <p class="panel-note">Pooled missense observed/expected (O/E) with 95% confidence intervals.
+      misOEUF is the upper bound; <strong>lower&nbsp;=&nbsp;more constrained</strong>.</p>
+    <div id="headline" class="panel"></div>
+
+    <h2 class="panel-title">Per-residue missense constraint</h2>
+    <p class="panel-note">One bar per residue, coloured by missense O/E. Ticks above mark
+      inter-chain <strong>interface</strong> residues. Hover for detail.</p>
+    <div id="track" class="panel"></div>
+    <div id="legend" class="legend"></div>
+
+    <h2 class="panel-title">Interacting partners</h2>
+    <p class="panel-note">Structural partners from inter-chain contacts. Node colour = the
+      partner&rsquo;s interface misOEUF; edge width = number of shared contact residues.
+      Hover a partner to highlight where it touches this protein; click a filled node to open it.</p>
+    <div id="network" class="panel"></div>
+    <div id="partner-table"></div>
+  </section>
+
+  <section id="error" hidden></section>
+</main>
+
+<footer>
+  <div class="wrap">
+    Built from gnomAD v4.1 constraint &times; Genomics2Proteins interface structures.
+    Aggregated, derived data only. &middot;
+    <a href="https://github.com/nikbaya/interface_constraint_visualiser">source</a>
+  </div>
+</footer>
+
+<div id="tooltip" class="tooltip" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

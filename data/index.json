@@ -1,0 +1,193 @@
+{
+ "generated": "2026-06-09",
+ "g2p_date": "20260519",
+ "proteins": [
+  {
+   "gene_symbol": "TAF4",
+   "uniprot_id": "O00268",
+   "length": 1085,
+   "n_interface_residues": 135,
+   "interface_misoeuf": 0.5846,
+   "noninterface_misoeuf": 1.1083,
+   "depletion_log10p": 12.76,
+   "delta_oe": 0.5699,
+   "n_partners": 12
+  },
+  {
+   "gene_symbol": "SRRM1",
+   "uniprot_id": "Q8IYB3",
+   "length": 904,
+   "n_interface_residues": 39,
+   "interface_misoeuf": 0.2469,
+   "noninterface_misoeuf": 0.8769,
+   "depletion_log10p": 9.96,
+   "delta_oe": 0.7052,
+   "n_partners": 2
+  },
+  {
+   "gene_symbol": "DOT1L",
+   "uniprot_id": "Q8TEK3",
+   "length": 1537,
+   "n_interface_residues": 117,
+   "interface_misoeuf": 0.5301,
+   "noninterface_misoeuf": 0.9408,
+   "depletion_log10p": 9.72,
+   "delta_oe": 0.4757,
+   "n_partners": 3
+  },
+  {
+   "gene_symbol": "CREBBP",
+   "uniprot_id": "Q92793",
+   "length": 2442,
+   "n_interface_residues": 181,
+   "interface_misoeuf": 0.5315,
+   "noninterface_misoeuf": 0.8383,
+   "depletion_log10p": 9.65,
+   "delta_oe": 0.3573,
+   "n_partners": 4
+  },
+  {
+   "gene_symbol": "EIF4G1",
+   "uniprot_id": "Q04637",
+   "length": 1599,
+   "n_interface_residues": 56,
+   "interface_misoeuf": 0.3807,
+   "noninterface_misoeuf": 0.8454,
+   "depletion_log10p": 9.06,
+   "delta_oe": 0.5472,
+   "n_partners": 2
+  },
+  {
+   "gene_symbol": "SETD2",
+   "uniprot_id": "Q9BYW2",
+   "length": 2564,
+   "n_interface_residues": 38,
+   "interface_misoeuf": 0.2952,
+   "noninterface_misoeuf": 0.8531,
+   "depletion_log10p": 8.47,
+   "delta_oe": 0.6682,
+   "n_partners": 2
+  },
+  {
+   "gene_symbol": "SFPQ",
+   "uniprot_id": "P23246",
+   "length": 707,
+   "n_interface_residues": 116,
+   "interface_misoeuf": 0.5513,
+   "noninterface_misoeuf": 0.9753,
+   "depletion_log10p": 8.24,
+   "delta_oe": 0.4709,
+   "n_partners": 2
+  },
+  {
+   "gene_symbol": "BRD4",
+   "uniprot_id": "O60885",
+   "length": 1362,
+   "n_interface_residues": 160,
+   "interface_misoeuf": 0.5416,
+   "noninterface_misoeuf": 0.8656,
+   "depletion_log10p": 8.21,
+   "delta_oe": 0.3719,
+   "n_partners": 10
+  },
+  {
+   "gene_symbol": "GRIN2B",
+   "uniprot_id": "Q13224",
+   "length": 1484,
+   "n_interface_residues": 109,
+   "interface_misoeuf": 0.3417,
+   "noninterface_misoeuf": 0.6242,
+   "depletion_log10p": 7.37,
+   "delta_oe": 0.3348,
+   "n_partners": 1
+  },
+  {
+   "gene_symbol": "GRIN1",
+   "uniprot_id": "Q05586",
+   "length": 938,
+   "n_interface_residues": 217,
+   "interface_misoeuf": 0.3369,
+   "noninterface_misoeuf": 0.536,
+   "depletion_log10p": 5.57,
+   "delta_oe": 0.2173,
+   "n_partners": 5
+  },
+  {
+   "gene_symbol": "KRAS",
+   "uniprot_id": "P01116",
+   "length": 189,
+   "n_interface_residues": 123,
+   "interface_misoeuf": 0.4344,
+   "noninterface_misoeuf": 0.926,
+   "depletion_log10p": 2.17,
+   "delta_oe": 0.4009,
+   "n_partners": 6
+  },
+  {
+   "gene_symbol": "SMARCB1",
+   "uniprot_id": "Q12824",
+   "length": 385,
+   "n_interface_residues": 117,
+   "interface_misoeuf": 0.4634,
+   "noninterface_misoeuf": 0.5453,
+   "depletion_log10p": 1.03,
+   "delta_oe": 0.1052,
+   "n_partners": 8
+  },
+  {
+   "gene_symbol": "DLG4",
+   "uniprot_id": "P78352",
+   "length": 724,
+   "n_interface_residues": 114,
+   "interface_misoeuf": 0.5767,
+   "noninterface_misoeuf": 0.6084,
+   "depletion_log10p": 0.94,
+   "delta_oe": 0.0872,
+   "n_partners": 0
+  },
+  {
+   "gene_symbol": "TP53",
+   "uniprot_id": "P04637",
+   "length": 393,
+   "n_interface_residues": 214,
+   "interface_misoeuf": 0.9523,
+   "noninterface_misoeuf": 1.0177,
+   "depletion_log10p": 0.47,
+   "delta_oe": 0.0553,
+   "n_partners": 15
+  },
+  {
+   "gene_symbol": "HBA1",
+   "uniprot_id": "P69905",
+   "length": 142,
+   "n_interface_residues": 101,
+   "interface_misoeuf": 0.504,
+   "noninterface_misoeuf": 0.5933,
+   "depletion_log10p": 0.35,
+   "delta_oe": 0.0316,
+   "n_partners": 3
+  },
+  {
+   "gene_symbol": "PTEN",
+   "uniprot_id": "P60484",
+   "length": 403,
+   "n_interface_residues": 51,
+   "interface_misoeuf": 0.6004,
+   "noninterface_misoeuf": 0.503,
+   "depletion_log10p": 0.29,
+   "delta_oe": 0.0105,
+   "n_partners": 1
+  },
+  {
+   "gene_symbol": "HBB",
+   "uniprot_id": "P68871",
+   "length": 147,
+   "n_interface_residues": 98,
+   "interface_misoeuf": 1.1067,
+   "noninterface_misoeuf": 1.0056,
+   "depletion_log10p": 0.13,
+   "delta_oe": -0.1553,
+   "n_partners": 3
+  }
+ ]
+}
