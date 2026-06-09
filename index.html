@@ -5,6 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Interface Constraint Visualiser</title>
 <meta name="description" content="How depleted of missense variation are protein-protein interface residues? Search a protein and explore interface constraint and its interacting partners.">
+
+<!-- Social preview (Open Graph + Twitter card). Absolute URLs required. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Interface Constraint Visualiser">
+<meta property="og:title" content="Are protein interface residues more constrained?">
+<meta property="og:description" content="Missense depletion and ClinVar pathogenic variants at protein–protein interfaces, residue by residue. Built from gnomAD v4.1 × Genomics2Proteins.">
+<meta property="og:url" content="https://nikbaya.github.io/interface_constraint_visualiser/">
+<meta property="og:image" content="https://nikbaya.github.io/interface_constraint_visualiser/assets/og-preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Interface Constraint Visualiser — coolwarm per-residue constraint track with pathogenic variants clustered at an interface.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Are protein interface residues more constrained?">
+<meta name="twitter:description" content="Missense depletion and ClinVar pathogenic variants at protein–protein interfaces, residue by residue.">
+<meta name="twitter:image" content="https://nikbaya.github.io/interface_constraint_visualiser/assets/og-preview.png">
+
 <link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/layout.css">
 </head>
@@ -56,6 +72,18 @@
       inter-chain <strong>interface</strong> residues. Hover for detail.</p>
     <div id="track" class="panel"></div>
     <div id="legend" class="legend"></div>
+
+    <div id="clinvar-section" hidden>
+      <h2 class="panel-title">ClinVar pathogenic variants at the interface</h2>
+      <p class="panel-note">Where known disease variants fall along the protein.
+        <strong style="color:var(--orange)">Interface</strong> residues are marked on the
+        baseline; <strong style="color:#b40426">pathogenic</strong> (P/LP) variants sit above,
+        <strong style="color:#3b4cc0">benign</strong> (B/LB) below. A ring marks a variant on an
+        interface residue.</p>
+      <p id="clinvar-headline" class="headline-stat"></p>
+      <div id="clinvar" class="panel"></div>
+      <div id="clinvar-legend" class="legend"></div>
+    </div>
 
     <h2 class="panel-title">Interacting partners</h2>
     <p class="panel-note">Structural partners from inter-chain contacts. Node colour = the

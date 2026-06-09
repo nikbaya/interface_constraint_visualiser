@@ -1,0 +1,98 @@
+<!doctype html>
+<!-- Source for the social-preview image (assets/og-preview.png).
+     Render at 1200x630 with headless Chrome:
+       chrome --headless --screenshot=assets/og-preview.png --window-size=1200,630 \
+         --default-background-color=00000000 assets/og.html
+     Not served as a page; purely the OG-image template. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1200px; height: 630px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: #1a1a1a; background: #ffffff;
+    padding: 72px 80px; position: relative; overflow: hidden;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; font-size: 24px; font-weight: 700; }
+  .brand .dot { width: 22px; height: 22px; border-radius: 50%; background: #F36C3E; }
+  h1 { font-size: 68px; line-height: 1.08; letter-spacing: -.02em; max-width: 18ch; margin-top: 8px; }
+  h1 em { color: #F36C3E; font-style: normal; }
+  .lede { font-size: 27px; color: #33373b; max-width: 46ch; margin-top: 22px; }
+  .foot { font-size: 22px; color: #63666A; }
+  .viz { position: absolute; right: 80px; bottom: 150px; width: 470px; }
+  .legend { display: flex; gap: 26px; font-size: 19px; color: #63666A; margin-top: 14px; align-items: center; }
+  .legend .k { display: inline-flex; align-items: center; gap: 8px; }
+  .legend .sw { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+</style>
+</head>
+<body>
+  <div>
+    <div class="brand"><span class="dot"></span> Interface Constraint Visualiser</div>
+    <h1>Are protein <em>interface</em> residues more constrained?</h1>
+    <p class="lede">Missense depletion and ClinVar pathogenic variants at
+      protein&ndash;protein interfaces, residue by residue.</p>
+  </div>
+
+  <svg class="viz" viewBox="0 0 470 150" xmlns="http://www.w3.org/2000/svg">
+    <!-- coolwarm per-residue track -->
+    <g id="track"></g>
+    <!-- interface ticks + pathogenic lollipops drawn by script -->
+    <g id="marks"></g>
+  </svg>
+
+  <div class="foot">gnomAD v4.1 constraint &times; Genomics2Proteins interface structures</div>
+
+  <script>
+    // Coolwarm interpolation (matches the site's O/E scale).
+    function lerp(a, b, t) { return Math.round(a + (b - a) * t); }
+    function hex(c) { return c.map((v) => v.toString(16).padStart(2, "0")).join(""); }
+    const RED = [180, 4, 38], MID = [247, 247, 247], BLU = [59, 76, 192];
+    function coolwarm(t) {
+      const e = t <= .5 ? RED.map((c, i) => lerp(c, MID[i], t / .5))
+                        : MID.map((c, i) => lerp(c, BLU[i], (t - .5) / .5));
+      return "#" + hex(e);
+    }
+    const N = 94, W = 470, bw = W / N, baseY = 92;
+    // Interface block roughly in the middle (more constrained -> low O/E -> red).
+    const ifaceStart = 34, ifaceEnd = 52;
+    const track = document.getElementById("track");
+    const marks = document.getElementById("marks");
+    for (let i = 0; i < N; i++) {
+      const inIface = i >= ifaceStart && i <= ifaceEnd;
+      // interface residues skew constrained (low O/E), rest scattered near 1.
+      const oe = inIface ? 0.12 + Math.random() * 0.32 : 0.6 + Math.random() * 0.9;
+      const t = Math.max(0, Math.min(1, (oe - 0.15) / (1.85 - 0.15)));
+      const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      r.setAttribute("x", i * bw); r.setAttribute("y", baseY);
+      r.setAttribute("width", Math.max(bw - 0.4, 0.6)); r.setAttribute("height", 30);
+      r.setAttribute("fill", coolwarm(t));
+      track.appendChild(r);
+      if (inIface) {
+        const tick = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        tick.setAttribute("x", i * bw); tick.setAttribute("y", baseY - 8);
+        tick.setAttribute("width", Math.max(bw - 0.4, 1)); tick.setAttribute("height", 5);
+        tick.setAttribute("fill", "#F36C3E");
+        marks.appendChild(tick);
+      }
+    }
+    // Pathogenic lollipops clustered over the interface block.
+    [37, 41, 44, 46, 49].forEach((i) => {
+      const cx = i * bw + bw / 2;
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", cx); line.setAttribute("x2", cx);
+      line.setAttribute("y1", baseY - 12); line.setAttribute("y2", 24);
+      line.setAttribute("stroke", "#b40426"); line.setAttribute("stroke-width", 1.4);
+      line.setAttribute("opacity", 0.5);
+      marks.appendChild(line);
+      const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      dot.setAttribute("cx", cx); dot.setAttribute("cy", 24); dot.setAttribute("r", 6.5);
+      dot.setAttribute("fill", "#b40426");
+      dot.setAttribute("stroke", "#F36C3E"); dot.setAttribute("stroke-width", 2.2);
+      marks.appendChild(dot);
+    });
+  </script>
+</body>
+</html>

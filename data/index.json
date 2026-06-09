@@ -23,7 +23,9 @@
    },
    "depletion_log10p": 12.76,
    "delta_oe": 0.5699,
-   "n_partners": 12
+   "n_partners": 12,
+   "clinvar_plp": 17,
+   "clinvar_plp_log10p": 0.82
   },
   {
    "gene_symbol": "SRRM1",
@@ -46,7 +48,9 @@
    },
    "depletion_log10p": 9.96,
    "delta_oe": 0.7052,
-   "n_partners": 2
+   "n_partners": 2,
+   "clinvar_plp": 0,
+   "clinvar_plp_log10p": null
   },
   {
    "gene_symbol": "DOT1L",
@@ -69,7 +73,9 @@
    },
    "depletion_log10p": 9.72,
    "delta_oe": 0.4757,
-   "n_partners": 3
+   "n_partners": 3,
+   "clinvar_plp": 9,
+   "clinvar_plp_log10p": 1.58
   },
   {
    "gene_symbol": "CREBBP",
@@ -92,7 +98,9 @@
    },
    "depletion_log10p": 9.65,
    "delta_oe": 0.3573,
-   "n_partners": 4
+   "n_partners": 4,
+   "clinvar_plp": 371,
+   "clinvar_plp_log10p": 1.07
   },
   {
    "gene_symbol": "EIF4G1",
@@ -115,7 +123,9 @@
    },
    "depletion_log10p": 9.06,
    "delta_oe": 0.5472,
-   "n_partners": 2
+   "n_partners": 2,
+   "clinvar_plp": 0,
+   "clinvar_plp_log10p": null
   },
   {
    "gene_symbol": "SETD2",
@@ -138,7 +148,9 @@
    },
    "depletion_log10p": 8.47,
    "delta_oe": 0.6682,
-   "n_partners": 2
+   "n_partners": 2,
+   "clinvar_plp": 56,
+   "clinvar_plp_log10p": 0.25
   },
   {
    "gene_symbol": "SFPQ",
@@ -161,30 +173,9 @@
    },
    "depletion_log10p": 8.24,
    "delta_oe": 0.4709,
-   "n_partners": 2
-  },
-  {
-   "gene_symbol": "BRD4",
-   "uniprot_id": "O60885",
-   "length": 1362,
-   "n_interface_residues": 160,
-   "interface": {
-    "obs": 92.0,
-    "exp": 202.0,
-    "oe": 0.4554,
-    "ci_low": 0.3847,
-    "ci_high": 0.5416
-   },
-   "noninterface": {
-    "obs": 1333.0,
-    "exp": 1611.2,
-    "oe": 0.8273,
-    "ci_low": 0.791,
-    "ci_high": 0.8656
-   },
-   "depletion_log10p": 8.21,
-   "delta_oe": 0.3719,
-   "n_partners": 10
+   "n_partners": 2,
+   "clinvar_plp": 0,
+   "clinvar_plp_log10p": null
   },
   {
    "gene_symbol": "GRIN2B",
@@ -207,7 +198,9 @@
    },
    "depletion_log10p": 7.37,
    "delta_oe": 0.3348,
-   "n_partners": 1
+   "n_partners": 1,
+   "clinvar_plp": 174,
+   "clinvar_plp_log10p": 4.96
   },
   {
    "gene_symbol": "GRIN1",
@@ -230,7 +223,9 @@
    },
    "depletion_log10p": 5.57,
    "delta_oe": 0.2173,
-   "n_partners": 5
+   "n_partners": 5,
+   "clinvar_plp": 80,
+   "clinvar_plp_log10p": 6.3
   },
   {
    "gene_symbol": "KRAS",
@@ -253,7 +248,9 @@
    },
    "depletion_log10p": 2.17,
    "delta_oe": 0.4009,
-   "n_partners": 6
+   "n_partners": 6,
+   "clinvar_plp": 37,
+   "clinvar_plp_log10p": 0.23
   },
   {
    "gene_symbol": "SMARCB1",
@@ -276,7 +273,9 @@
    },
    "depletion_log10p": 1.03,
    "delta_oe": 0.1052,
-   "n_partners": 8
+   "n_partners": 8,
+   "clinvar_plp": 65,
+   "clinvar_plp_log10p": 0.06
   },
   {
    "gene_symbol": "DLG4",
@@ -299,7 +298,9 @@
    },
    "depletion_log10p": 0.94,
    "delta_oe": 0.0872,
-   "n_partners": 0
+   "n_partners": 0,
+   "clinvar_plp": 71,
+   "clinvar_plp_log10p": 0.66
   },
   {
    "gene_symbol": "TP53",
@@ -322,7 +323,9 @@
    },
    "depletion_log10p": 0.47,
    "delta_oe": 0.0553,
-   "n_partners": 15
+   "n_partners": 15,
+   "clinvar_plp": 305,
+   "clinvar_plp_log10p": 0.13
   },
   {
    "gene_symbol": "HBA1",
@@ -345,7 +348,9 @@
    },
    "depletion_log10p": 0.35,
    "delta_oe": 0.0316,
-   "n_partners": 3
+   "n_partners": 3,
+   "clinvar_plp": 62,
+   "clinvar_plp_log10p": 0.11
   },
   {
    "gene_symbol": "PTEN",
@@ -368,7 +373,9 @@
    },
    "depletion_log10p": 0.29,
    "delta_oe": 0.0105,
-   "n_partners": 1
+   "n_partners": 1,
+   "clinvar_plp": 326,
+   "clinvar_plp_log10p": 0.04
   },
   {
    "gene_symbol": "HBB",
@@ -391,7 +398,9 @@
    },
    "depletion_log10p": 0.13,
    "delta_oe": -0.1553,
-   "n_partners": 3
+   "n_partners": 3,
+   "clinvar_plp": 118,
+   "clinvar_plp_log10p": 0.23
   }
  ]
 }

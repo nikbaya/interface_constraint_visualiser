@@ -3,6 +3,7 @@ import { oeColor, OE_GRAD, fmt2, int, pretty_p } from "./format.js";
 import { renderTrack } from "./residueTrack.js";
 import { renderHeadline } from "./headline.js";
 import { renderNetwork } from "./network.js";
+import { renderClinvar } from "./clinvarPanel.js";
 import { init3D } from "./structure3d.js";
 
 const el = (id) => document.getElementById(id);
@@ -112,6 +113,7 @@ async function showProtein(uni) {
   renderHeadline(el("headline"), prot.summary);
   currentTrack = renderTrack(el("track"), prot);
   renderLegend(el("legend"));
+  renderClinvar(prot);
   renderNetwork(el("network"), prot, currentTrack);
   renderPartnerTable(prot);
 }
@@ -173,6 +175,7 @@ function onResize() {
     const p = window._prot;
     renderHeadline(el("headline"), p.summary);
     currentTrack = renderTrack(el("track"), p);
+    renderClinvar(p);
     renderNetwork(el("network"), p, currentTrack);
   }
 }

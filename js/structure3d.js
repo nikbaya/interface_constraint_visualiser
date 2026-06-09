@@ -34,6 +34,12 @@ export async function init3D(elId, opts = {}) {
 
   const viewer = window.$3Dmol.createViewer(el, { backgroundColor: "white", antialias: true });
   viewer.addModel(data, "pdb");
+
+  // PDB entry-name badge, bottom-left of the viewer window (derived from filename).
+  const pdbId = (pick.file.match(/([^/]+)\.pdb$/i)?.[1] || "").toUpperCase();
+  let badge = el.querySelector(".pdb-badge");
+  if (!badge) { badge = document.createElement("div"); badge.className = "pdb-badge"; el.appendChild(badge); }
+  badge.textContent = pdbId ? `PDB: ${pdbId}` : "";
   // Base: each subunit a light Broad tint so the different proteins are distinct.
   pick.chains.forEach((ch, i) => {
     viewer.setStyle({ chain: ch }, { cartoon: { color: CHAIN_TINTS[i % CHAIN_TINTS.length] } });
