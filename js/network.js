@@ -60,7 +60,7 @@ export function renderNetwork(container, protein, track) {
         `<span class="muted">contacts this protein at</span> <b>${d.n}</b> <span class="muted">residues</span><br>` +
         `<span class="muted">bonds:</span> ${(d.bonds || []).join(", ") || "–"}<br>` +
         `<span class="swatch" style="background:${oeColor(d.oeuf)}"></span><span class="muted">partner interface misOEUF</span> <b>${fmt2(d.oeuf)}</b>` +
-        (so && so.oe != null ? `<br><span class="muted">O/E at shared contacts</span> <b>${fmt2(so.oe)}</b>` : ""),
+        (so && so.oe != null ? `<br><span class="muted">${d.gene} O/E at these contacts</span> <b>${fmt2(so.oe)}</b>` : ""),
         evt);
     })
     .on("mousemove", (evt, d) => showTip(document.getElementById("tooltip").innerHTML, evt))

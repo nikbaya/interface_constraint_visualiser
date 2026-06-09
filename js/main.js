@@ -136,7 +136,7 @@ function renderPartnerTable(p) {
   el("partner-table").innerHTML = `
     <table>
       <thead><tr><th>Partner</th><th style="text-align:left">Bond types</th><th>Shared contacts</th>
-        <th>Partner interface misOEUF</th><th>O/E at shared contacts</th></tr></thead>
+        <th>Partner interface misOEUF</th><th>Partner O/E at contacts</th></tr></thead>
       <tbody>${body}</tbody>
     </table>`;
   el("partner-table").querySelectorAll("tr.clickable").forEach((tr) =>
