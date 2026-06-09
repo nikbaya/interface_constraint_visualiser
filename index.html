@@ -23,13 +23,19 @@
   <!-- Landing -->
   <section id="landing">
     <div class="hero">
-      <h1>Are protein <em>interface</em> residues more constrained?</h1>
-      <p class="lede">
-        Residues that sit at a protein&ndash;protein interface tend to be depleted of
-        missense variation in gnomAD. Search a protein to see its interface vs.
-        non-interface missense constraint (<strong>misOEUF</strong> &mdash; lower means more
-        constrained) and the interface constraint of its structural partners.
-      </p>
+      <div class="hero-text">
+        <h1>Are protein <em>interface</em> residues more constrained?</h1>
+        <p class="lede">
+          Residues that sit at a protein&ndash;protein interface tend to be depleted of
+          missense variation in gnomAD. Search a protein to see its interface vs.
+          non-interface missense constraint (<strong>misOEUF</strong> &mdash; lower means more
+          constrained) and the interface constraint of its structural partners.
+        </p>
+      </div>
+      <figure class="hero-3d">
+        <div id="viewer3d"></div>
+        <figcaption id="viewer3d-cap"></figcaption>
+      </figure>
     </div>
     <h2 class="section-title">Proteins, ranked by interface depletion significance</h2>
     <div id="card-grid" class="card-grid"></div>
@@ -73,6 +79,7 @@
 <div id="tooltip" class="tooltip" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/3dmol@2.4.2/build/3Dmol-min.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

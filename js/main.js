@@ -3,6 +3,7 @@ import { oeColor, OE_GRAD, fmt2, int, pretty_p } from "./format.js";
 import { renderTrack } from "./residueTrack.js";
 import { renderHeadline } from "./headline.js";
 import { renderNetwork } from "./network.js";
+import { init3D } from "./structure3d.js";
 
 const el = (id) => document.getElementById(id);
 let INDEX = [];
@@ -19,6 +20,7 @@ async function init() {
     INDEX.forEach((p) => { bySymbol.set(p.gene_symbol.toUpperCase(), p); byUni.set(p.uniprot_id, p); });
     buildSearch();
     renderCards();
+    init3D("viewer3d");
     window.addEventListener("hashchange", route);
     window.addEventListener("resize", debounce(onResize, 200));
     route();
@@ -39,24 +41,47 @@ function buildSearch() {
 }
 
 function renderCards() {
-  const maxAxis = Math.max(1.1, d3.max(INDEX, (p) => Math.max(p.interface_misoeuf || 0, p.noninterface_misoeuf || 0)));
-  const bar = (label, v, color) => `
-    <div class="bar-row"><span class="lbl">${label}</span>
-      <span class="bar-track"><span class="bar-fill" style="width:${Math.min(100, (v / maxAxis) * 100)}%;background:${color}"></span></span>
-      <span class="bar-val">${fmt2(v)}</span></div>`;
+  const maxAxis = Math.max(1.2, d3.max(INDEX, (p) =>
+    Math.max(p.interface?.ci_high || 0, p.noninterface?.ci_high || 0)) * 1.04);
   el("card-grid").innerHTML = INDEX.map((p) => {
     const strong = (p.depletion_log10p || 0) >= 3;
     return `<a class="card" href="#/${p.uniprot_id}">
       <div class="card-top"><span class="card-gene">${p.gene_symbol}</span><span class="card-uni">${p.uniprot_id}</span></div>
-      <div class="card-bars">
-        ${bar("Interface", p.interface_misoeuf, oeColor(p.interface_misoeuf))}
-        ${bar("Non-int.", p.noninterface_misoeuf, oeColor(p.noninterface_misoeuf))}
-      </div>
+      ${miniForest(p, maxAxis)}
       <div class="card-foot">
         <span class="sig-pill ${strong ? "sig-strong" : ""}">${pretty_p(p.depletion_log10p)}</span>
         <span>${int(p.n_partners)} partners</span>
       </div></a>`;
   }).join("");
+}
+
+// Compact dumbbell forest plot: interface (orange) vs non-interface (grey)
+// missense O/E with 95% CI whiskers and a dashed O/E=1 reference.
+function miniForest(p, maxAxis) {
+  const W = 196, H = 58, padL = 4, padR = 22, top = 13, rowGap = 18, axisY = H - 12;
+  const x = (v) => padL + (Math.min(v, maxAxis) / maxAxis) * (W - padL - padR);
+  const rows = [
+    { d: p.interface, color: "var(--interface)", y: top },
+    { d: p.noninterface, color: "var(--noninterface)", y: top + rowGap },
+  ];
+  let g = "";
+  // O/E = 1 reference.
+  g += `<line x1="${x(1)}" x2="${x(1)}" y1="${top - 8}" y2="${axisY - 2}" stroke="var(--line)" stroke-dasharray="2,2"/>`;
+  g += `<text x="${x(1)}" y="${top - 9}" text-anchor="middle" font-size="7" fill="var(--muted)">1</text>`;
+  for (const r of rows) {
+    const d = r.d; if (!d || d.oe == null) continue;
+    if (d.ci_low != null) {
+      g += `<line x1="${x(d.ci_low)}" x2="${x(d.ci_high)}" y1="${r.y}" y2="${r.y}" stroke="${r.color}" stroke-width="2" opacity="0.45"/>`;
+    }
+    g += `<circle cx="${x(d.oe)}" cy="${r.y}" r="3.6" fill="${r.color}" stroke="#fff" stroke-width="1"/>`;
+    g += `<text x="${x(d.ci_high) + 5}" y="${r.y + 3}" font-size="8.5" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${fmt2(d.oe)}</text>`;
+  }
+  // Tiny axis ticks.
+  g += `<line x1="${padL}" x2="${W - padR}" y1="${axisY}" y2="${axisY}" stroke="var(--line)"/>`;
+  [0, 1, Math.round(maxAxis * 10) / 10].forEach((t) => {
+    g += `<text x="${x(t)}" y="${axisY + 9}" text-anchor="middle" font-size="7" fill="var(--muted)">${t}</text>`;
+  });
+  return `<svg class="mini-forest" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMinYMid meet" role="img">${g}</svg>`;
 }
 
 function route() {
@@ -112,9 +137,9 @@ function renderLegend(c) {
   c.innerHTML = `
     <span class="key"><span class="tick" style="background:var(--orange)"></span>interface residue</span>
     <span class="key">missense O/E:</span>
-    <span class="muted">0 (constrained)</span>
+    <span class="muted">more constrained</span>
     <span class="scale" style="background:${OE_GRAD}"></span>
-    <span class="muted">2+ (tolerant)</span>`;
+    <span class="muted">more tolerant</span>`;
 }
 
 function renderPartnerTable(p) {

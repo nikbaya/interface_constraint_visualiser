@@ -7,8 +7,20 @@
    "uniprot_id": "O00268",
    "length": 1085,
    "n_interface_residues": 135,
-   "interface_misoeuf": 0.5846,
-   "noninterface_misoeuf": 1.1083,
+   "interface": {
+    "obs": 85.0,
+    "exp": 174.1,
+    "oe": 0.4881,
+    "ci_low": 0.4097,
+    "ci_high": 0.5846
+   },
+   "noninterface": {
+    "obs": 1268.0,
+    "exp": 1198.4,
+    "oe": 1.0581,
+    "ci_low": 1.0105,
+    "ci_high": 1.1083
+   },
    "depletion_log10p": 12.76,
    "delta_oe": 0.5699,
    "n_partners": 12
@@ -18,8 +30,20 @@
    "uniprot_id": "Q8IYB3",
    "length": 904,
    "n_interface_residues": 39,
-   "interface_misoeuf": 0.2469,
-   "noninterface_misoeuf": 0.8769,
+   "interface": {
+    "obs": 6.0,
+    "exp": 48.0,
+    "oe": 0.1251,
+    "ci_low": 0.0685,
+    "ci_high": 0.2469
+   },
+   "noninterface": {
+    "obs": 913.0,
+    "exp": 1099.6,
+    "oe": 0.8303,
+    "ci_low": 0.7865,
+    "ci_high": 0.8769
+   },
    "depletion_log10p": 9.96,
    "delta_oe": 0.7052,
    "n_partners": 2
@@ -29,8 +53,20 @@
    "uniprot_id": "Q8TEK3",
    "length": 1537,
    "n_interface_residues": 117,
-   "interface_misoeuf": 0.5301,
-   "noninterface_misoeuf": 0.9408,
+   "interface": {
+    "obs": 62.0,
+    "exp": 144.5,
+    "oe": 0.4291,
+    "ci_low": 0.3497,
+    "ci_high": 0.5301
+   },
+   "noninterface": {
+    "obs": 1789.0,
+    "exp": 1977.2,
+    "oe": 0.9048,
+    "ci_low": 0.8704,
+    "ci_high": 0.9408
+   },
    "depletion_log10p": 9.72,
    "delta_oe": 0.4757,
    "n_partners": 3
@@ -40,8 +76,20 @@
    "uniprot_id": "Q92793",
    "length": 2442,
    "n_interface_residues": 181,
-   "interface_misoeuf": 0.5315,
-   "noninterface_misoeuf": 0.8383,
+   "interface": {
+    "obs": 109.0,
+    "exp": 240.5,
+    "oe": 0.4533,
+    "ci_low": 0.3882,
+    "ci_high": 0.5315
+   },
+   "noninterface": {
+    "obs": 2416.0,
+    "exp": 2980.4,
+    "oe": 0.8106,
+    "ci_low": 0.784,
+    "ci_high": 0.8383
+   },
    "depletion_log10p": 9.65,
    "delta_oe": 0.3573,
    "n_partners": 4
@@ -51,8 +99,20 @@
    "uniprot_id": "Q04637",
    "length": 1599,
    "n_interface_residues": 56,
-   "interface_misoeuf": 0.3807,
-   "noninterface_misoeuf": 0.8454,
+   "interface": {
+    "obs": 21.0,
+    "exp": 79.4,
+    "oe": 0.2644,
+    "ci_low": 0.1875,
+    "ci_high": 0.3807
+   },
+   "noninterface": {
+    "obs": 1626.0,
+    "exp": 2003.6,
+    "oe": 0.8115,
+    "ci_low": 0.7792,
+    "ci_high": 0.8454
+   },
    "depletion_log10p": 9.06,
    "delta_oe": 0.5472,
    "n_partners": 2
@@ -62,8 +122,20 @@
    "uniprot_id": "Q9BYW2",
    "length": 2564,
    "n_interface_residues": 38,
-   "interface_misoeuf": 0.2952,
-   "noninterface_misoeuf": 0.8531,
+   "interface": {
+    "obs": 7.0,
+    "exp": 44.5,
+    "oe": 0.1572,
+    "ci_low": 0.0894,
+    "ci_high": 0.2952
+   },
+   "noninterface": {
+    "obs": 2479.0,
+    "exp": 3003.6,
+    "oe": 0.8253,
+    "ci_low": 0.7986,
+    "ci_high": 0.8531
+   },
    "depletion_log10p": 8.47,
    "delta_oe": 0.6682,
    "n_partners": 2
@@ -73,8 +145,20 @@
    "uniprot_id": "P23246",
    "length": 707,
    "n_interface_residues": 116,
-   "interface_misoeuf": 0.5513,
-   "noninterface_misoeuf": 0.9753,
+   "interface": {
+    "obs": 65.0,
+    "exp": 144.9,
+    "oe": 0.4485,
+    "ci_low": 0.3672,
+    "ci_high": 0.5513
+   },
+   "noninterface": {
+    "obs": 782.0,
+    "exp": 850.6,
+    "oe": 0.9193,
+    "ci_low": 0.8671,
+    "ci_high": 0.9753
+   },
    "depletion_log10p": 8.24,
    "delta_oe": 0.4709,
    "n_partners": 2
@@ -84,8 +168,20 @@
    "uniprot_id": "O60885",
    "length": 1362,
    "n_interface_residues": 160,
-   "interface_misoeuf": 0.5416,
-   "noninterface_misoeuf": 0.8656,
+   "interface": {
+    "obs": 92.0,
+    "exp": 202.0,
+    "oe": 0.4554,
+    "ci_low": 0.3847,
+    "ci_high": 0.5416
+   },
+   "noninterface": {
+    "obs": 1333.0,
+    "exp": 1611.2,
+    "oe": 0.8273,
+    "ci_low": 0.791,
+    "ci_high": 0.8656
+   },
    "depletion_log10p": 8.21,
    "delta_oe": 0.3719,
    "n_partners": 10
@@ -95,8 +191,20 @@
    "uniprot_id": "Q13224",
    "length": 1484,
    "n_interface_residues": 109,
-   "interface_misoeuf": 0.3417,
-   "noninterface_misoeuf": 0.6242,
+   "interface": {
+    "obs": 36.0,
+    "exp": 139.1,
+    "oe": 0.2587,
+    "ci_low": 0.1983,
+    "ci_high": 0.3417
+   },
+   "noninterface": {
+    "obs": 1072.0,
+    "exp": 1806.2,
+    "oe": 0.5935,
+    "ci_low": 0.5646,
+    "ci_high": 0.6242
+   },
    "depletion_log10p": 7.37,
    "delta_oe": 0.3348,
    "n_partners": 1
@@ -106,8 +214,20 @@
    "uniprot_id": "Q05586",
    "length": 938,
    "n_interface_residues": 217,
-   "interface_misoeuf": 0.3369,
-   "noninterface_misoeuf": 0.536,
+   "interface": {
+    "obs": 82.0,
+    "exp": 292.4,
+    "oe": 0.2804,
+    "ci_low": 0.2346,
+    "ci_high": 0.3369
+   },
+   "noninterface": {
+    "obs": 497.0,
+    "exp": 998.6,
+    "oe": 0.4977,
+    "ci_low": 0.4625,
+    "ci_high": 0.536
+   },
    "depletion_log10p": 5.57,
    "delta_oe": 0.2173,
    "n_partners": 5
@@ -117,8 +237,20 @@
    "uniprot_id": "P01116",
    "length": 189,
    "n_interface_residues": 123,
-   "interface_misoeuf": 0.4344,
-   "noninterface_misoeuf": 0.926,
+   "interface": {
+    "obs": 50.0,
+    "exp": 145.7,
+    "oe": 0.3432,
+    "ci_low": 0.2735,
+    "ci_high": 0.4344
+   },
+   "noninterface": {
+    "obs": 58.0,
+    "exp": 77.9,
+    "oe": 0.7441,
+    "ci_low": 0.6024,
+    "ci_high": 0.926
+   },
    "depletion_log10p": 2.17,
    "delta_oe": 0.4009,
    "n_partners": 6
@@ -128,8 +260,20 @@
    "uniprot_id": "Q12824",
    "length": 385,
    "n_interface_residues": 117,
-   "interface_misoeuf": 0.4634,
-   "noninterface_misoeuf": 0.5453,
+   "interface": {
+    "obs": 61.0,
+    "exp": 162.9,
+    "oe": 0.3745,
+    "ci_low": 0.3047,
+    "ci_high": 0.4634
+   },
+   "noninterface": {
+    "obs": 167.0,
+    "exp": 348.2,
+    "oe": 0.4796,
+    "ci_low": 0.4229,
+    "ci_high": 0.5453
+   },
    "depletion_log10p": 1.03,
    "delta_oe": 0.1052,
    "n_partners": 8
@@ -139,8 +283,20 @@
    "uniprot_id": "P78352",
    "length": 724,
    "n_interface_residues": 114,
-   "interface_misoeuf": 0.5767,
-   "noninterface_misoeuf": 0.6084,
+   "interface": {
+    "obs": 76.0,
+    "exp": 159.5,
+    "oe": 0.4765,
+    "ci_low": 0.396,
+    "ci_high": 0.5767
+   },
+   "noninterface": {
+    "obs": 471.0,
+    "exp": 835.5,
+    "oe": 0.5637,
+    "ci_low": 0.5229,
+    "ci_high": 0.6084
+   },
    "depletion_log10p": 0.94,
    "delta_oe": 0.0872,
    "n_partners": 0
@@ -150,8 +306,20 @@
    "uniprot_id": "P04637",
    "length": 393,
    "n_interface_residues": 214,
-   "interface_misoeuf": 0.9523,
-   "noninterface_misoeuf": 1.0177,
+   "interface": {
+    "obs": 240.0,
+    "exp": 280.5,
+    "oe": 0.8557,
+    "ci_low": 0.7703,
+    "ci_high": 0.9523
+   },
+   "noninterface": {
+    "obs": 224.0,
+    "exp": 245.9,
+    "oe": 0.911,
+    "ci_low": 0.8171,
+    "ci_high": 1.0177
+   },
    "depletion_log10p": 0.47,
    "delta_oe": 0.0553,
    "n_partners": 15
@@ -161,8 +329,20 @@
    "uniprot_id": "P69905",
    "length": 142,
    "n_interface_residues": 101,
-   "interface_misoeuf": 0.504,
-   "noninterface_misoeuf": 0.5933,
+   "interface": {
+    "obs": 109.0,
+    "exp": 253.6,
+    "oe": 0.4299,
+    "ci_low": 0.3681,
+    "ci_high": 0.504
+   },
+   "noninterface": {
+    "obs": 44.0,
+    "exp": 95.3,
+    "oe": 0.4615,
+    "ci_low": 0.3625,
+    "ci_high": 0.5933
+   },
    "depletion_log10p": 0.35,
    "delta_oe": 0.0316,
    "n_partners": 3
@@ -172,8 +352,20 @@
    "uniprot_id": "P60484",
    "length": 403,
    "n_interface_residues": 51,
-   "interface_misoeuf": 0.6004,
-   "noninterface_misoeuf": 0.503,
+   "interface": {
+    "obs": 27.0,
+    "exp": 62.0,
+    "oe": 0.4354,
+    "ci_low": 0.3209,
+    "ci_high": 0.6004
+   },
+   "noninterface": {
+    "obs": 189.0,
+    "exp": 423.9,
+    "oe": 0.4458,
+    "ci_low": 0.3961,
+    "ci_high": 0.503
+   },
    "depletion_log10p": 0.29,
    "delta_oe": 0.0105,
    "n_partners": 1
@@ -183,8 +375,20 @@
    "uniprot_id": "P68871",
    "length": 147,
    "n_interface_residues": 98,
-   "interface_misoeuf": 1.1067,
-   "noninterface_misoeuf": 1.0056,
+   "interface": {
+    "obs": 112.0,
+    "exp": 118.4,
+    "oe": 0.9459,
+    "ci_low": 0.8117,
+    "ci_high": 1.1067
+   },
+   "noninterface": {
+    "obs": 48.0,
+    "exp": 60.7,
+    "oe": 0.7906,
+    "ci_low": 0.6273,
+    "ci_high": 1.0056
+   },
    "depletion_log10p": 0.13,
    "delta_oe": -0.1553,
    "n_partners": 3

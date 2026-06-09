@@ -43,7 +43,7 @@ export function renderNetwork(container, protein, track) {
   node.append("circle")
     .attr("r", radius)
     .attr("fill", (d) => oeColor(d.oeuf))
-    .attr("stroke", (d) => (d.self ? "#1b1f23" : d.inPilot ? "var(--broad-blue)" : "#fff"))
+    .attr("stroke", (d) => (d.self ? "#1b1f23" : d.inPilot ? "#1b1f23" : "#fff"))
     .attr("stroke-width", (d) => (d.self ? 2.5 : d.inPilot ? 2 : 1.2));
 
   node.append("text").text((d) => d.gene)
