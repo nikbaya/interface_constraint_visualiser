@@ -1,9 +1,13 @@
 <!doctype html>
 <!-- Source for the social-preview image (assets/og-preview.png).
-     Render at 1200x630 with headless Chrome:
-       chrome --headless --screenshot=assets/og-preview.png --window-size=1200,630 \
-         --default-background-color=00000000 assets/og.html
-     Not served as a page; purely the OG-image template. -->
+     Renders a real 3D complex with its inter-subunit interface in orange.
+     Must be served over http (3Dmol fetches the PDB), then screenshot at
+     1200x630 with headless Chrome + WebGL flags:
+       python3 -m http.server 8140 &
+       chrome --headless=new --enable-unsafe-swiftshader --ignore-gpu-blocklist \
+         --hide-scrollbars --window-size=1200,630 --virtual-time-budget=9000 \
+         --screenshot=assets/og-preview.png http://localhost:8140/assets/og.html
+     Not linked as a page; purely the OG-image template. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -12,87 +16,55 @@
   html, body { width: 1200px; height: 630px; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    color: #1a1a1a; background: #ffffff;
-    padding: 72px 80px; position: relative; overflow: hidden;
-    display: flex; flex-direction: column; justify-content: space-between;
+    color: #1a1a1a; background: #ffffff; overflow: hidden; position: relative;
   }
+  .text { position: absolute; left: 80px; top: 72px; width: 560px; height: 486px;
+    display: flex; flex-direction: column; justify-content: space-between; }
   .brand { display: flex; align-items: center; gap: 14px; font-size: 24px; font-weight: 700; }
   .brand .dot { width: 22px; height: 22px; border-radius: 50%; background: #F36C3E; }
-  h1 { font-size: 68px; line-height: 1.08; letter-spacing: -.02em; max-width: 18ch; margin-top: 8px; }
+  h1 { font-size: 60px; line-height: 1.08; letter-spacing: -.02em; max-width: 15ch; margin-top: 8px; }
   h1 em { color: #F36C3E; font-style: normal; }
-  .lede { font-size: 27px; color: #33373b; max-width: 46ch; margin-top: 22px; }
-  .foot { font-size: 22px; color: #63666A; }
-  .viz { position: absolute; right: 80px; bottom: 150px; width: 470px; }
-  .legend { display: flex; gap: 26px; font-size: 19px; color: #63666A; margin-top: 14px; align-items: center; }
-  .legend .k { display: inline-flex; align-items: center; gap: 8px; }
-  .legend .sw { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+  .lede { font-size: 25px; color: #33373b; max-width: 42ch; margin-top: 20px; }
+  .foot { font-size: 21px; color: #63666A; }
+  .foot .o { color: #F36C3E; font-weight: 600; }
+  #viz { position: absolute; right: 18px; top: 35px; width: 480px; height: 560px; }
 </style>
 </head>
 <body>
-  <div>
-    <div class="brand"><span class="dot"></span> Interface Constraint Visualiser</div>
-    <h1>Are protein <em>interface</em> residues more constrained?</h1>
-    <p class="lede">Missense depletion and ClinVar pathogenic variants at
-      protein&ndash;protein interfaces, residue by residue.</p>
+  <div class="text">
+    <div>
+      <div class="brand"><span class="dot"></span> Interface Constraint Visualiser</div>
+      <h1>Are protein <em>interface</em> residues more constrained?</h1>
+      <p class="lede">Missense depletion and ClinVar pathogenic variants at
+        protein&ndash;protein interfaces, residue by residue.</p>
+    </div>
+    <p class="foot"><span class="o">Orange</span> = inter-subunit interface &middot;
+      gnomAD v4.1 &times; Genomics2Proteins</p>
   </div>
+  <div id="viz"></div>
 
-  <svg class="viz" viewBox="0 0 470 150" xmlns="http://www.w3.org/2000/svg">
-    <!-- coolwarm per-residue track -->
-    <g id="track"></g>
-    <!-- interface ticks + pathogenic lollipops drawn by script -->
-    <g id="marks"></g>
-  </svg>
-
-  <div class="foot">gnomAD v4.1 constraint &times; Genomics2Proteins interface structures</div>
-
+  <script src="https://cdn.jsdelivr.net/npm/3dmol@2.4.2/build/3Dmol-min.js"></script>
   <script>
-    // Coolwarm interpolation (matches the site's O/E scale).
-    function lerp(a, b, t) { return Math.round(a + (b - a) * t); }
-    function hex(c) { return c.map((v) => v.toString(16).padStart(2, "0")).join(""); }
-    const RED = [180, 4, 38], MID = [247, 247, 247], BLU = [59, 76, 192];
-    function coolwarm(t) {
-      const e = t <= .5 ? RED.map((c, i) => lerp(c, MID[i], t / .5))
-                        : MID.map((c, i) => lerp(c, BLU[i], (t - .5) / .5));
-      return "#" + hex(e);
-    }
-    const N = 94, W = 470, bw = W / N, baseY = 92;
-    // Interface block roughly in the middle (more constrained -> low O/E -> red).
-    const ifaceStart = 34, ifaceEnd = 52;
-    const track = document.getElementById("track");
-    const marks = document.getElementById("marks");
-    for (let i = 0; i < N; i++) {
-      const inIface = i >= ifaceStart && i <= ifaceEnd;
-      // interface residues skew constrained (low O/E), rest scattered near 1.
-      const oe = inIface ? 0.12 + Math.random() * 0.32 : 0.6 + Math.random() * 0.9;
-      const t = Math.max(0, Math.min(1, (oe - 0.15) / (1.85 - 0.15)));
-      const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      r.setAttribute("x", i * bw); r.setAttribute("y", baseY);
-      r.setAttribute("width", Math.max(bw - 0.4, 0.6)); r.setAttribute("height", 30);
-      r.setAttribute("fill", coolwarm(t));
-      track.appendChild(r);
-      if (inIface) {
-        const tick = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        tick.setAttribute("x", i * bw); tick.setAttribute("y", baseY - 8);
-        tick.setAttribute("width", Math.max(bw - 0.4, 1)); tick.setAttribute("height", 5);
-        tick.setAttribute("fill", "#F36C3E");
-        marks.appendChild(tick);
-      }
-    }
-    // Pathogenic lollipops clustered over the interface block.
-    [37, 41, 44, 46, 49].forEach((i) => {
-      const cx = i * bw + bw / 2;
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute("x1", cx); line.setAttribute("x2", cx);
-      line.setAttribute("y1", baseY - 12); line.setAttribute("y2", 24);
-      line.setAttribute("stroke", "#b40426"); line.setAttribute("stroke-width", 1.4);
-      line.setAttribute("opacity", 0.5);
-      marks.appendChild(line);
-      const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      dot.setAttribute("cx", cx); dot.setAttribute("cy", 24); dot.setAttribute("r", 6.5);
-      dot.setAttribute("fill", "#b40426");
-      dot.setAttribute("stroke", "#F36C3E"); dot.setAttribute("stroke-width", 2.2);
-      marks.appendChild(dot);
-    });
+    const CHAIN_TINTS = ["#DCEEC8", "#E6DAF2", "#FBD3D8"];  // pale subunit colours
+    const INTERFACE = "#F36C3E";                            // Broad orange
+    const CHAINS = ["A", "B"];                              // TIM homodimer (clear interface plane)
+    (async () => {
+      const data = await (await fetch("1hti.pdb")).text();
+      const v = window.$3Dmol.createViewer(document.getElementById("viz"),
+        { backgroundColor: "white", antialias: true });
+      v.addModel(data, "pdb");
+      CHAINS.forEach((ch, i) =>
+        v.setStyle({ chain: ch }, { cartoon: { color: CHAIN_TINTS[i % CHAIN_TINTS.length] } }));
+      CHAINS.forEach((ch) =>
+        v.addStyle({ chain: ch, byres: true, within: { distance: 4.0, sel: { chain: CHAINS.filter((c) => c !== ch) } } },
+          { cartoon: { color: INTERFACE } }));
+      // Orient the two-fold interface plane toward the camera, then fit.
+      v.rotate(90, "y");
+      v.zoomTo();
+      v.zoom(0.95);
+      v.render();
+      window.__ready = true;   // screenshot signal
+    })();
   </script>
 </body>
 </html>

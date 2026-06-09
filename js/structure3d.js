@@ -6,7 +6,7 @@
 
 // Light Broad tints per subunit so the distinct proteins in the complex read
 // clearly; interface residues are drawn over these in orange.
-const CHAIN_TINTS = ["#C1E6A0", "#D6C0E9", "#FEA2A9"];  // light green, purple, red
+const CHAIN_TINTS = ["#DCEEC8", "#E6DAF2", "#FBD3D8"];  // pale green, purple, pink (non-interface)
 const INTERFACE = "#F36C3E";  // Broad orange
 
 const STRUCTURES = [
