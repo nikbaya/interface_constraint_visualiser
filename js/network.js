@@ -67,16 +67,27 @@ export function renderNetwork(container, protein, track) {
     .on("mouseleave", () => { track && track.clear(); hideTip(); })
     .on("click", (evt, d) => { if (d.inPilot) location.hash = `#/${d.id}`; });
 
+  // Seed deterministic positions: focal protein at the centre, partners spread
+  // on a ring around it. This is a hub-and-spoke graph (every edge links a
+  // partner to the focal node), so a radial seed + a pinned hub keeps small
+  // layouts (even a single partner) stable and centred without forceCenter
+  // fighting the pin.
+  const self = nodes[0];
+  self.x = self.fx = W / 2;
+  self.y = self.fy = H / 2;
+  const m = partners.length;
+  const seedR = Math.min(W, H) * 0.32;
+  partners.forEach((_, k) => {
+    const ang = -Math.PI / 2 + (m === 1 ? Math.PI / 4 : (2 * Math.PI * k) / m);
+    nodes[k + 1].x = W / 2 + seedR * Math.cos(ang);
+    nodes[k + 1].y = H / 2 + seedR * Math.sin(ang);
+  });
+
   const sim = d3.forceSimulation(nodes)
     .force("link", d3.forceLink(links).id((d) => d.id).distance(110).strength(.4))
     .force("charge", d3.forceManyBody().strength(-260))
-    .force("center", d3.forceCenter(W / 2, H / 2))
     .force("collide", d3.forceCollide((d) => radius(d) + 16))
     .on("tick", ticked);
-
-  // Pin the focal protein near the centre.
-  const self = nodes[0];
-  self.fx = W / 2; self.fy = H / 2;
 
   function ticked() {
     nodes.forEach((d) => {
