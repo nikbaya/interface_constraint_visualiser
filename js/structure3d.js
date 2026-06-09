@@ -4,7 +4,9 @@
 // chain) in orange — the same notion of "interface" the site quantifies.
 // A different complex is shown on each page load.
 
-const BASE = "#d7dbe0";       // non-interface cartoon (neutral grey)
+// Light Broad tints per subunit so the distinct proteins in the complex read
+// clearly; interface residues are drawn over these in orange.
+const CHAIN_TINTS = ["#C1E6A0", "#D6C0E9", "#FEA2A9"];  // light green, purple, red
 const INTERFACE = "#F36C3E";  // Broad orange
 
 const STRUCTURES = [
@@ -32,8 +34,11 @@ export async function init3D(elId, opts = {}) {
 
   const viewer = window.$3Dmol.createViewer(el, { backgroundColor: "white", antialias: true });
   viewer.addModel(data, "pdb");
-  viewer.setStyle({}, { cartoon: { color: BASE } });
-  // Per chain: residues within 4 A of any other chain -> interface (orange).
+  // Base: each subunit a light Broad tint so the different proteins are distinct.
+  pick.chains.forEach((ch, i) => {
+    viewer.setStyle({ chain: ch }, { cartoon: { color: CHAIN_TINTS[i % CHAIN_TINTS.length] } });
+  });
+  // Overlay: residues within 4 A of any other chain -> interface (orange).
   pick.chains.forEach((ch) => {
     const others = pick.chains.filter((c) => c !== ch);
     viewer.addStyle(
