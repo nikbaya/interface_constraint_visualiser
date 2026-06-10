@@ -45,11 +45,8 @@ function buildSearch() {
 // 1000-protein catalog stays responsive. The rest are reachable via search.
 const CARD_BATCH = 60;
 let cardsShown = 0;
-let cardMaxAxis = 1.2;
 
 function renderCards() {
-  cardMaxAxis = Math.max(1.2, d3.max(INDEX, (p) =>
-    Math.max(p.interface?.ci_high || 0, p.noninterface?.ci_high || 0)) * 1.04);
   el("card-grid").innerHTML = "";
   cardsShown = 0;
   appendCards();
@@ -59,7 +56,7 @@ function cardHTML(p) {
   const strong = (p.depletion_log10p || 0) >= 3;
   return `<a class="card" href="#/${p.uniprot_id}">
     <div class="card-top"><span class="card-gene">${p.gene_symbol}</span><span class="card-uni">${p.uniprot_id}</span></div>
-    ${miniForest(p, cardMaxAxis)}
+    ${miniForest(p)}
     <div class="card-foot">
       <span class="sig-pill ${strong ? "sig-strong" : ""}">${pretty_p(p.depletion_log10p)}</span>
       <span>${int(p.n_partners)} partners</span>
@@ -91,7 +88,13 @@ function updateCardChrome() {
 
 // Compact dumbbell forest plot: interface (orange) vs non-interface (grey)
 // missense O/E with 95% CI whiskers and a dashed O/E=1 reference.
-function miniForest(p, maxAxis) {
+// Axis is fixed to 0–1.2 (so cards are visually comparable), extending only
+// for the rare gene whose own values run past it. Ticks at 0 and 1.
+function miniForest(p) {
+  const ends = [p.interface, p.noninterface]
+    .flatMap((d) => (d ? [d.oe, d.ci_high] : []))
+    .filter((v) => v != null);
+  const maxAxis = Math.max(1.2, (ends.length ? Math.max(...ends) : 1) * 1.04);
   const W = 196, H = 58, padL = 4, padR = 22, top = 13, rowGap = 18, axisY = H - 12;
   const x = (v) => padL + (Math.min(v, maxAxis) / maxAxis) * (W - padL - padR);
   const rows = [
@@ -112,7 +115,7 @@ function miniForest(p, maxAxis) {
   }
   // Tiny axis ticks.
   g += `<line x1="${padL}" x2="${W - padR}" y1="${axisY}" y2="${axisY}" stroke="var(--line)"/>`;
-  [0, 1, Math.round(maxAxis * 10) / 10].forEach((t) => {
+  [0, 1].forEach((t) => {
     g += `<text x="${x(t)}" y="${axisY + 9}" text-anchor="middle" font-size="7" fill="var(--muted)">${t}</text>`;
   });
   return `<svg class="mini-forest" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMinYMid meet" role="img">${g}</svg>`;
