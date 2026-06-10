@@ -23,11 +23,8 @@ header .wrap {
 }
 .brand { font-weight: 700; color: var(--fg); display: flex; align-items: center; gap: .5rem; font-size: 1rem; }
 .brand:hover { text-decoration: none; }
-.brand-mark {
-  width: 14px; height: 14px; border-radius: 50%;
-  background: var(--orange);
-  display: inline-block;
-}
+/* Two overlapping grey circles (two proteins) meeting at an orange interface. */
+.brand-mark { height: 18px; width: auto; display: inline-block; flex: none; }
 #search-form { margin: 0; }
 #search {
   width: min(46vw, 360px); padding: .5rem .75rem;
