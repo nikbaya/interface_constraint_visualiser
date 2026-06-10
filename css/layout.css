@@ -58,6 +58,14 @@ main { padding: 1.5rem 0 3rem; }
 .hero-3d figcaption { color: var(--muted); font-size: .78rem; margin-top: .4rem; text-align: center; }
 .section-title { font-size: 1rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
   margin: 2rem 0 .9rem; font-weight: 600; }
+#card-hint { margin: -.4rem 0 .9rem; }
+#card-more { text-align: center; margin: 1.1rem 0 .4rem; }
+.show-more {
+  font: inherit; font-size: .9rem; font-weight: 600; color: var(--broad-blue);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  padding: .55rem 1.1rem; cursor: pointer; transition: background .15s, border-color .15s;
+}
+.show-more:hover { background: var(--bg-soft); border-color: var(--light-broad-blue); }
 
 /* Card grid */
 .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: .8rem; }

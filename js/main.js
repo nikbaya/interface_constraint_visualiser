@@ -41,19 +41,52 @@ function buildSearch() {
   });
 }
 
+// Render landing cards progressively: only a batch is in the DOM at once, so a
+// 1000-protein catalog stays responsive. The rest are reachable via search.
+const CARD_BATCH = 60;
+let cardsShown = 0;
+let cardMaxAxis = 1.2;
+
 function renderCards() {
-  const maxAxis = Math.max(1.2, d3.max(INDEX, (p) =>
+  cardMaxAxis = Math.max(1.2, d3.max(INDEX, (p) =>
     Math.max(p.interface?.ci_high || 0, p.noninterface?.ci_high || 0)) * 1.04);
-  el("card-grid").innerHTML = INDEX.map((p) => {
-    const strong = (p.depletion_log10p || 0) >= 3;
-    return `<a class="card" href="#/${p.uniprot_id}">
-      <div class="card-top"><span class="card-gene">${p.gene_symbol}</span><span class="card-uni">${p.uniprot_id}</span></div>
-      ${miniForest(p, maxAxis)}
-      <div class="card-foot">
-        <span class="sig-pill ${strong ? "sig-strong" : ""}">${pretty_p(p.depletion_log10p)}</span>
-        <span>${int(p.n_partners)} partners</span>
-      </div></a>`;
-  }).join("");
+  el("card-grid").innerHTML = "";
+  cardsShown = 0;
+  appendCards();
+}
+
+function cardHTML(p) {
+  const strong = (p.depletion_log10p || 0) >= 3;
+  return `<a class="card" href="#/${p.uniprot_id}">
+    <div class="card-top"><span class="card-gene">${p.gene_symbol}</span><span class="card-uni">${p.uniprot_id}</span></div>
+    ${miniForest(p, cardMaxAxis)}
+    <div class="card-foot">
+      <span class="sig-pill ${strong ? "sig-strong" : ""}">${pretty_p(p.depletion_log10p)}</span>
+      <span>${int(p.n_partners)} partners</span>
+    </div></a>`;
+}
+
+function appendCards() {
+  const next = INDEX.slice(cardsShown, cardsShown + CARD_BATCH);
+  el("card-grid").insertAdjacentHTML("beforeend", next.map(cardHTML).join(""));
+  cardsShown += next.length;
+  updateCardChrome();
+}
+
+function updateCardChrome() {
+  const total = INDEX.length;
+  el("card-hint").innerHTML = total > CARD_BATCH
+    ? `Showing <b>${cardsShown}</b> of <b>${total}</b> proteins, most interface-depleted first — search any gene above to jump straight to it.`
+    : "";
+  const more = el("card-more");
+  if (cardsShown < total) {
+    const remaining = total - cardsShown;
+    const n = Math.min(CARD_BATCH, remaining);
+    more.innerHTML = `<button id="show-more" class="show-more">Show ${n} more (${remaining} remaining)</button>`;
+    el("show-more").addEventListener("click", appendCards);
+  } else {
+    more.innerHTML = "";
+  }
 }
 
 // Compact dumbbell forest plot: interface (orange) vs non-interface (grey)
