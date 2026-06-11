@@ -166,11 +166,22 @@ function renderHeader(p) {
          <span class="tag">90% CI ${fmt2(gc.lof_oe_ci_lower)}–${fmt2(gc.lof_oe_ci_upper)}
          · LOEUF ${fmt2(gc.lof_oe_ci_upper)}</span></div>`
     : "";
+  const nameLine = p.protein_name ? `<div class="protein-name">${p.protein_name}</div>` : "";
+  const gnomadHref = p.gene_id
+    ? `https://gnomad.broadinstitute.org/gene/${p.gene_id}?dataset=gnomad_r4`
+    : `https://gnomad.broadinstitute.org/`;
+  const links = `<div class="ext-links">More info:
+    <a href="https://www.uniprot.org/uniprotkb/${p.uniprot_id}/entry" target="_blank" rel="noopener">UniProt</a>
+    <a href="${gnomadHref}" target="_blank" rel="noopener">gnomAD</a>
+    <a href="https://www.genecards.org/cgi-bin/carddisp.pl?gene=${p.gene_symbol}" target="_blank" rel="noopener">GeneCards</a>
+    <a href="https://www.ncbi.nlm.nih.gov/clinvar/?term=${p.gene_symbol}%5Bgene%5D" target="_blank" rel="noopener">ClinVar</a></div>`;
   el("protein-header").innerHTML = `
     <h1>${p.gene_symbol}</h1>
+    ${nameLine}
     <div class="sub">${p.uniprot_id} · ${int(p.length)} aa · ${int(s.n_interface_residues)} interface residues
       (${(s.interface_fraction * 100).toFixed(0)}%)</div>
     ${lofLine}
+    ${links}
     <p class="headline-stat">
       Interface misOEUF <b style="color:${oeColor(s.interface ? s.interface.ci_high : null)}">${i}</b>
       vs non-interface <b>${n}</b> —

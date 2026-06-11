@@ -89,7 +89,12 @@ main { padding: 1.5rem 0 3rem; }
 /* Protein view */
 .back { font-size: .85rem; color: var(--muted); display: inline-block; margin: .25rem 0 1rem; }
 #protein-header h1 { font-size: 1.7rem; margin: 0 0 .15rem; letter-spacing: -.02em; }
+#protein-header .protein-name { font-size: 1.02rem; color: #33373b; margin: 0 0 .25rem; }
 #protein-header .sub { color: var(--muted); font-size: .9rem; }
+#protein-header .ext-links { font-size: .82rem; color: var(--muted); margin-top: .5rem; }
+#protein-header .ext-links a { margin: 0 .15rem; }
+#protein-header .ext-links a::after { content: " ·"; color: var(--line); }
+#protein-header .ext-links a:last-child::after { content: ""; }
 #protein-header .headline-stat { margin: .6rem 0 0; font-size: 1rem; }
 #protein-header .headline-stat b { font-variant-numeric: tabular-nums; }
 .panel-title { font-size: 1.05rem; margin: 1.9rem 0 .2rem; padding-top: 1rem; border-top: 1px solid var(--line); }
