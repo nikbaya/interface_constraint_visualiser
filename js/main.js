@@ -159,10 +159,18 @@ function renderHeader(p) {
   const i = s.interface ? fmt2(s.interface.ci_high) : "–";
   const n = s.noninterface ? fmt2(s.noninterface.ci_high) : "–";
   const more = s.delta_oe != null && s.delta_oe > 0;
+  const gc = p.gene_constraint;
+  const lofLine = gc
+    ? `<div class="sub">Gene LoF constraint (gnomAD v4.1):
+         O/E <b style="color:${oeColor(gc.lof_oe)}">${fmt2(gc.lof_oe)}</b>
+         <span class="tag">90% CI ${fmt2(gc.lof_oe_ci_lower)}–${fmt2(gc.lof_oe_ci_upper)}
+         · LOEUF ${fmt2(gc.lof_oe_ci_upper)}</span></div>`
+    : "";
   el("protein-header").innerHTML = `
     <h1>${p.gene_symbol}</h1>
     <div class="sub">${p.uniprot_id} · ${int(p.length)} aa · ${int(s.n_interface_residues)} interface residues
       (${(s.interface_fraction * 100).toFixed(0)}%)</div>
+    ${lofLine}
     <p class="headline-stat">
       Interface misOEUF <b style="color:${oeColor(s.interface ? s.interface.ci_high : null)}">${i}</b>
       vs non-interface <b>${n}</b> —
