@@ -123,6 +123,9 @@ th:first-child { background: #f6f8fa; }
 tr.clickable { cursor: pointer; }
 tr.clickable:hover td { background: var(--bg-soft); }
 tr.clickable:hover td:first-child { background: var(--bg-soft); }
+/* Homomer (self-interaction) row: light-grey tint + accented left border. */
+tr.homomer-row td { background: var(--bg-soft); font-weight: 500; }
+tr.homomer-row td:first-child { background: var(--bg-soft); box-shadow: inset 3px 0 0 var(--noninterface), 1px 0 0 var(--line); }
 .tag { font-size: .72rem; color: var(--muted); }
 
 /* Tooltip */

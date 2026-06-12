@@ -146,9 +146,9 @@ async function showProtein(uni) {
   window._prot = prot;
 
   renderHeader(prot);
-  renderHeadline(el("headline"), prot.summary);
+  renderHeadline(el("headline"), prot.summary, prot.pioneer);
   currentTrack = renderTrack(el("track"), prot);
-  renderLegend(el("legend"));
+  renderLegend(el("legend"), !!prot.pioneer);
   renderClinvar(prot);
   renderNetwork(el("network"), prot, currentTrack);
   renderPartnerTable(prot);
@@ -178,8 +178,9 @@ function renderHeader(p) {
   el("protein-header").innerHTML = `
     <h1>${p.gene_symbol}</h1>
     ${nameLine}
-    <div class="sub">${p.uniprot_id} · ${int(p.length)} aa · ${int(s.n_interface_residues)} interface residues
-      (${(s.interface_fraction * 100).toFixed(0)}%)</div>
+    <div class="sub">${p.uniprot_id} · ${int(p.length)} aa · ${int(s.n_interface_residues)} G2P interface residues
+      (${(s.interface_fraction * 100).toFixed(0)}%)${p.pioneer && p.pioneer.n_pioneer_residues
+        ? ` · <span style="color:var(--purple)">${int(p.pioneer.n_pioneer_residues)} PIONEER-predicted</span>` : ""}</div>
     ${lofLine}
     ${links}
     <p class="headline-stat">
@@ -190,9 +191,13 @@ function renderHeader(p) {
     </p>`;
 }
 
-function renderLegend(c) {
+function renderLegend(c, hasPioneer) {
+  const pioneerKey = hasPioneer
+    ? '<span class="key"><span class="tick" style="background:var(--purple)"></span>PIONEER predicted interface</span>'
+    : "";
   c.innerHTML = `
-    <span class="key"><span class="tick" style="background:var(--orange)"></span>interface residue</span>
+    <span class="key"><span class="tick" style="background:var(--orange)"></span>G2P interface residue</span>
+    ${pioneerKey}
     <span class="key">missense O/E:</span>
     <span class="muted">more constrained</span>
     <span class="scale" style="background:${OE_GRAD}"></span>
@@ -201,10 +206,21 @@ function renderLegend(c) {
 
 function renderPartnerTable(p) {
   const rows = (p.partners || []);
-  if (!rows.length) { el("partner-table").innerHTML = ""; return; }
+  const hm = p.homomer;
+  if (!rows.length && !hm) { el("partner-table").innerHTML = ""; return; }
   const oeCell = (b) => (b && b.oe != null
     ? `<span class="swatch" style="display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;background:${oeColor(b.oe)}"></span>${fmt2(b.oe)}`
     : "–");
+  // Homomer (self-interaction) row first, visually distinct and non-clickable.
+  const homomerRow = hm
+    ? `<tr class="homomer-row">
+        <td>↻ ${p.gene_symbol} <span class="tag">(homomer · self)</span></td>
+        <td class="tag" style="text-align:left">${(hm.bond_types || []).join(", ")}</td>
+        <td>${int(hm.n_self_contacts)}</td>
+        <td>–</td>
+        <td>${oeCell(hm.self_contact_oe)}</td>
+      </tr>`
+    : "";
   const body = rows.map((r) => {
     const oeuf = r.partner_summary ? r.partner_summary.interface_oeuf : null;
     return `<tr class="${r.in_pilot ? "clickable" : ""}" data-uni="${r.in_pilot ? r.uniprot_id : ""}">
@@ -219,7 +235,7 @@ function renderPartnerTable(p) {
     <table>
       <thead><tr><th>Partner</th><th style="text-align:left">Bond types</th><th>Shared contacts</th>
         <th>Partner interface misOEUF</th><th>Partner O/E at contacts</th></tr></thead>
-      <tbody>${body}</tbody>
+      <tbody>${homomerRow}${body}</tbody>
     </table>`;
   el("partner-table").querySelectorAll("tr.clickable").forEach((tr) =>
     tr.addEventListener("click", () => { const u = tr.dataset.uni; if (u) location.hash = `#/${u}`; }));
@@ -228,7 +244,7 @@ function renderPartnerTable(p) {
 function onResize() {
   if (!el("protein").hidden && window._prot) {
     const p = window._prot;
-    renderHeadline(el("headline"), p.summary);
+    renderHeadline(el("headline"), p.summary, p.pioneer);
     currentTrack = renderTrack(el("track"), p);
     renderClinvar(p);
     renderNetwork(el("network"), p, currentTrack);

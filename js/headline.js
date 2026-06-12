@@ -2,15 +2,16 @@
 import { fmt2 } from "./format.js";
 import { showTip, moveTip, hideTip } from "./tooltip.js";
 
-export function renderHeadline(container, summary) {
+export function renderHeadline(container, summary, pioneer) {
   container.innerHTML = "";
   const rows = [
-    { key: "interface", label: "Interface", color: "var(--interface)", d: summary.interface },
+    { key: "interface", label: "G2P interface", color: "var(--interface)", d: summary.interface },
+    { key: "pioneer", label: "PIONEER interface", color: "var(--purple)", d: pioneer && pioneer.interface },
     { key: "noninterface", label: "Non-interface", color: "var(--noninterface)", d: summary.noninterface },
   ].filter((r) => r.d && r.d.oe != null);
   if (!rows.length) { container.innerHTML = '<p class="panel-note">No pooled constraint available.</p>'; return; }
 
-  const M = { top: 16, right: 70, bottom: 34, left: 110 };
+  const M = { top: 16, right: 70, bottom: 34, left: 132 };
   const W = Math.max(container.clientWidth || 920, 360);
   const rowH = 46;
   const H = M.top + rows.length * rowH + M.bottom;
@@ -38,15 +39,21 @@ export function renderHeadline(container, summary) {
     .attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "var(--muted)")
     .text("missense observed / expected");
 
+  // O/E = 0 (no observed variants): the point estimate sits on the boundary, so
+  // the 95% interval is unreliable (normal/Wald approximation breaks down there).
+  const isZero = (r) => r.d.oe === 0;
+
   rows.forEach((r, i) => {
     const cy = i * rowH + rowH / 2 - 6;
+    const zero = isZero(r);
     const row = g.append("g")
       .style("cursor", "default")
       .on("mousemove", (evt) => showTip(
         `<b>${r.label}</b><br><span class="muted">O/E</span> ${fmt2(r.d.oe)} ` +
         `<span class="muted">(95% CI ${fmt2(r.d.ci_low)}–${fmt2(r.d.ci_high)})</span><br>` +
         `<span class="muted">misOEUF</span> <b>${fmt2(r.d.ci_high)}</b> · ` +
-        `<span class="muted">obs ${r.d.obs} / exp ${fmt2(r.d.exp)}</span>`, evt))
+        `<span class="muted">obs ${r.d.obs} / exp ${fmt2(r.d.exp)}</span>` +
+        (zero ? `<br><span style="color:var(--red)">⚠ O/E = 0 (0 observed) — 95% CI unreliable</span>` : ""), evt))
       .on("mouseleave", hideTip);
 
     row.append("text").attr("x", -12).attr("y", cy + 4).attr("text-anchor", "end")
@@ -62,9 +69,16 @@ export function renderHeadline(container, summary) {
     // Point.
     row.append("circle").attr("cx", x(r.d.oe)).attr("cy", cy).attr("r", 6)
       .attr("fill", r.color).attr("stroke", "#fff").attr("stroke-width", 1.5);
-    // Value label.
+    // Value label (asterisk flags the unreliable O/E = 0 interval).
     row.append("text").attr("x", x(r.d.ci_high) + 8).attr("y", cy + 4)
-      .attr("font-size", 12).attr("fill", "var(--muted)").attr("font-variant-numeric", "tabular-nums")
-      .text(fmt2(r.d.oe));
+      .attr("font-size", 12).attr("fill", zero ? "var(--red)" : "var(--muted)")
+      .attr("font-variant-numeric", "tabular-nums")
+      .text(fmt2(r.d.oe) + (zero ? " *" : ""));
   });
+
+  // Footnote when any row is at the O/E = 0 boundary.
+  if (rows.some(isZero)) {
+    container.insertAdjacentHTML("beforeend",
+      `<p class="panel-note" style="margin-top:.2rem">* O/E = 0 (no observed missense variants) — the 95% CI is unreliable at the boundary (normal/Wald approximation breaks down).</p>`);
+  }
 }
