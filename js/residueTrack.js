@@ -97,5 +97,25 @@ export function renderTrack(container, protein) {
   }
   function clear() { hi.selectAll("path").remove(); }
 
-  return { highlight, clear };
+  // Persistent marker for a searched variant's residue: a red guide line through
+  // the track plus a labelled flag above it. Separate layer from highlight() so a
+  // variant pin survives partner-network hover highlighting.
+  const vm = g.append("g");
+  function markVariant(pos, label) {
+    vm.selectAll("*").remove();
+    if (!(pos >= 1 && pos <= L)) return;
+    const cx = x(pos);
+    vm.append("line").attr("x1", cx).attr("x2", cx).attr("y1", TOP_Y - 6).attr("y2", trackH)
+      .attr("stroke", "var(--red, #c1272d)").attr("stroke-width", 1.5);
+    vm.append("path").attr("d", `M${cx},${TOP_Y - 6} l5,-8 l-10,0 Z`)
+      .attr("fill", "var(--red, #c1272d)").attr("stroke", "#fff").attr("stroke-width", 0.6);
+    if (label) {
+      vm.append("text").attr("x", cx).attr("y", TOP_Y - 16).attr("text-anchor", "middle")
+        .attr("font-size", 10).attr("font-weight", 600).attr("fill", "var(--red, #c1272d)")
+        .text(label);
+    }
+  }
+  function clearVariant() { vm.selectAll("*").remove(); }
+
+  return { highlight, clear, markVariant, clearVariant };
 }

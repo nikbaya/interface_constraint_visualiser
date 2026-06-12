@@ -11,6 +11,9 @@ let INDEX = [];
 let bySymbol = new Map();
 let byUni = new Map();
 let currentTrack = null;
+let focusVariantPos = null;   // residue pin to (re)draw on the current protein track
+let VARIANT_INDEX = null;     // data/variant_index.json (lazy-loaded on first variant search)
+let variantIndexPromise = null;
 
 init();
 
@@ -33,12 +36,81 @@ async function init() {
 function buildSearch() {
   const dl = el("gene-list");
   dl.innerHTML = INDEX.map((p) => `<option value="${p.gene_symbol}">`).join("");
-  el("search-form").addEventListener("submit", (e) => {
+  el("search-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const q = el("search").value.trim().toUpperCase();
+    const raw = el("search").value.trim();
+    // Variant search (chrom-pos[-ref-alt], GRCh38): resolve to a residue and deep-link.
+    const v = parseVariant(raw);
+    if (v) {
+      el("search").blur();
+      try { await loadVariantIndex(); }
+      catch (err) { return showError(`Could not load data/variant_index.json (${err.message}).`); }
+      const hit = resolveVariant(v.chrom, v.pos);
+      if (hit) location.hash = `#/${hit.uniprot_id}/${hit.pos}`;
+      else showVariantNotFound(v);
+      return;
+    }
+    const q = raw.toUpperCase();
     const hit = bySymbol.get(q) || INDEX.find((p) => p.gene_symbol.toUpperCase().startsWith(q));
     if (hit) { location.hash = `#/${hit.uniprot_id}`; el("search").blur(); }
   });
+}
+
+// ---- Variant -> residue resolution (GRCh38, via data/variant_index.json) ----
+
+// Parse "17-7674220-C-T", "chr17:7674220", "X 12345" -> {chrom, pos} (ref/alt
+// ignored — position + transcript fully determine the residue). null if not a
+// coordinate (so it falls through to gene-symbol search).
+function parseVariant(q) {
+  const m = q.match(/^(?:chr)?(\d{1,2}|x|y|m|mt)[-:_ ]0*(\d+)\b/i);
+  if (!m) return null;
+  let chrom = m[1].toUpperCase();
+  if (chrom === "MT") chrom = "M";
+  return { chrom, pos: parseInt(m[2], 10) };
+}
+
+async function loadVariantIndex() {
+  if (VARIANT_INDEX) return VARIANT_INDEX;
+  if (!variantIndexPromise) {
+    variantIndexPromise = fetchJSON("data/variant_index.json").then((d) => (VARIANT_INDEX = d));
+  }
+  return variantIndexPromise;
+}
+
+// Walk a transcript's sorted CDS exons to a 0-based CDS offset (5'->3', strand-
+// aware), then residue pos = offset // 3 + 1 (1-based). null if pos is not coding.
+function cdsPosToResidue(t, pos) {
+  const exons = t.cds;  // ascending [[start,end],...], 1-based inclusive genomic
+  let idx = -1;
+  for (let i = 0; i < exons.length; i++) {
+    if (pos >= exons[i][0] && pos <= exons[i][1]) { idx = i; break; }
+  }
+  if (idx < 0) return null;
+  let offset;
+  if (t.strand === "+") {
+    offset = pos - exons[idx][0];
+    for (let i = 0; i < idx; i++) offset += exons[i][1] - exons[i][0] + 1;
+  } else {
+    offset = exons[idx][1] - pos;
+    for (let i = idx + 1; i < exons.length; i++) offset += exons[i][1] - exons[i][0] + 1;
+  }
+  return Math.floor(offset / 3) + 1;
+}
+
+function resolveVariant(chrom, pos) {
+  if (!VARIANT_INDEX) return null;
+  for (const t of VARIANT_INDEX.transcripts) {
+    if (t.chrom !== chrom) continue;
+    const res = cdsPosToResidue(t, pos);
+    if (res) return { uniprot_id: t.uniprot_id, gene_symbol: t.gene_symbol, pos: res };
+  }
+  return null;
+}
+
+function showVariantNotFound(v) {
+  showError(`No visualised protein covers chr${v.chrom}:${v.pos.toLocaleString()} (GRCh38). ` +
+    `This site indexes the coding regions of ~${INDEX.length} interface proteins — ` +
+    `the variant may fall outside them, be non-coding, or use a different assembly.`);
 }
 
 // Render landing cards progressively: only a batch is in the DOM at once, so a
@@ -122,12 +194,14 @@ function miniForest(p) {
 }
 
 function route() {
-  const m = location.hash.match(/^#\/(.+)$/);
+  // #/{id} or #/{id}/{residue_pos} (deep-link to a residue, e.g. from variant search).
+  const m = location.hash.match(/^#\/([^/]+)(?:\/(\d+))?$/);
   if (!m) return showLanding();
   const key = decodeURIComponent(m[1]).trim();
+  const focusPos = m[2] ? parseInt(m[2], 10) : null;
   const hit = byUni.get(key) || bySymbol.get(key.toUpperCase());
   if (!hit) return showLanding();
-  showProtein(hit.uniprot_id);
+  showProtein(hit.uniprot_id, focusPos);
 }
 
 function showLanding() {
@@ -135,7 +209,8 @@ function showLanding() {
   window.scrollTo({ top: 0 });
 }
 
-async function showProtein(uni) {
+async function showProtein(uni, focusPos = null) {
+  focusVariantPos = focusPos;
   el("landing").hidden = true; el("error").hidden = true; el("protein").hidden = false;
   window.scrollTo({ top: 0 });
   el("protein-header").innerHTML = `<p class="sub">Loading ${uni}…</p>`;
@@ -152,6 +227,26 @@ async function showProtein(uni) {
   renderClinvar(prot);
   renderNetwork(el("network"), prot, currentTrack);
   renderPartnerTable(prot);
+  applyVariantFocus(prot);
+}
+
+// Pin the searched variant's residue on the track (and note it in the header),
+// then bring the track into view. No-op when not arrived at via variant search.
+function applyVariantFocus(prot) {
+  if (!focusVariantPos || !currentTrack) return;
+  const r = (prot.residues || []).find((d) => d.pos === focusVariantPos);
+  const label = `${r && r.aa ? r.aa : ""}${focusVariantPos}`;
+  currentTrack.markVariant(focusVariantPos, label);
+  const oe = r && r.oe != null ? fmt2(r.oe) : "no data";
+  const tags = [];
+  if (r && r.is_interface) tags.push("G2P interface");
+  if (r && r.pioneer_interface) tags.push("PIONEER predicted");
+  const tagStr = tags.length ? ` · <b>${tags.join(" · ")}</b>` : "";
+  const note = document.createElement("div");
+  note.className = "variant-note";
+  note.innerHTML = `Variant search → residue <b>${label}</b> · missense O/E <b>${oe}</b>${tagStr}`;
+  el("protein-header").appendChild(note);
+  el("track").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 function renderHeader(p) {
@@ -248,6 +343,10 @@ function onResize() {
     currentTrack = renderTrack(el("track"), p);
     renderClinvar(p);
     renderNetwork(el("network"), p, currentTrack);
+    if (focusVariantPos && currentTrack) {
+      const r = (p.residues || []).find((d) => d.pos === focusVariantPos);
+      currentTrack.markVariant(focusVariantPos, `${r && r.aa ? r.aa : ""}${focusVariantPos}`);
+    }
   }
 }
 
