@@ -11,16 +11,9 @@ const warm = d3.interpolateLab(CW_RED, CW_MID);
 const cool = d3.interpolateLab(CW_MID, CW_BLUE);
 const oeT = d3.scaleLinear().domain([0.15, 1.85]).range([0, 1]).clamp(true);
 
-// Alternative ramp for colour-vision deficiency (viridis: dark = constrained).
-const vir = d3.interpolateViridis;
-let RAMP = localStorage.getItem("icv-ramp") || "coolwarm";
-export function setRamp(name) { RAMP = name; localStorage.setItem("icv-ramp", name); }
-export function getRamp() { return RAMP; }
-
 export function oeColor(oe) {
   if (oe == null || Number.isNaN(oe)) return "var(--nodata)";
   const t = oeT(oe);
-  if (RAMP === "viridis") return vir(t);
   return t <= 0.5 ? warm(t / 0.5) : cool((t - 0.5) / 0.5);
 }
 export function oeColorHex(oe) {  // for canvas (no CSS vars)
@@ -29,15 +22,11 @@ export function oeColorHex(oe) {  // for canvas (no CSS vars)
 }
 
 export function oeGradient() {
-  if (RAMP === "viridis") {
-    const stops = d3.range(0, 1.01, 0.1).map((t) => `${vir(t)} ${t * 100}%`).join(",");
-    return `linear-gradient(90deg,${stops})`;
-  }
   return `linear-gradient(90deg,${CW_RED},${CW_MID} 50%,${CW_BLUE})`;
 }
 
-// Categorical palette for partners (Okabe-Ito-inspired + extensions; distinct in
-// light and dark mode). Index wraps; a second pass uses a lighter tint.
+// Categorical palette for partners (Okabe-Ito-inspired + extensions). Index wraps;
+// a second pass uses a lighter tint.
 export const PARTNER_PALETTE = [
   "#0072B2", "#E69F00", "#009E73", "#CC79A7", "#56B4E9", "#D55E00", "#8C564B",
   "#7F7F7F", "#BCBD22", "#17BECF", "#9467BD", "#2CA02C",

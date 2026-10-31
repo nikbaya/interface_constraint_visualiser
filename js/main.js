@@ -1,6 +1,6 @@
 // App entry: load the index, route by URL hash, render the landing page
 // (overview scatter + ranked table / cards + gene-list mode) and protein pages.
-import { oeColor, oeGradient, setRamp, getRamp, fmt2, int, pretty_p, pretty_q, escapeHTML, bondList, TYPE_LABEL } from "./format.js";
+import { oeColor, oeGradient, fmt2, int, pretty_p, pretty_q, escapeHTML, bondList, TYPE_LABEL } from "./format.js";
 import { fetchJSON, loadProtein, indexMaps, prefetchProtein } from "./data.js";
 import { initSearch, lookup } from "./search.js";
 import { renderOverview, renderMini, matchPills, activePills, PILLS, PILL_PARAMS, HET_STEPS, DEFAULT_FILTERS } from "./overview.js";
@@ -288,9 +288,7 @@ function renderLegend(c, prot) {
   c.innerHTML = `
     <span class="key"><span class="tick" style="background:var(--orange)"></span>G2P interface residue</span>
     <span class="key">missense O/E:</span><span class="muted">constrained</span><span class="scale" style="background:${oeGradient()}"></span><span class="muted">tolerant</span>
-    <button class="chip-btn" id="ramp-toggle" title="colour-vision-friendly alternative">${getRamp() === "viridis" ? "use coolwarm" : "use viridis"}</button>
     <span class="key" style="margin-left:auto"><span class="tick" style="background:#0053d6"></span>pLDDT ≥ 90 <span class="tick" style="background:#65cbf3"></span>70–90 <span class="tick" style="background:#ffdb13"></span>50–70 <span class="tick" style="background:#ff7d45"></span>&lt; 50</span>`;
-  c.querySelector("#ramp-toggle").addEventListener("click", () => { setRamp(getRamp() === "viridis" ? "coolwarm" : "viridis"); document.documentElement.style.setProperty("--oe-grad", oeGradient()); onResize(); renderLegend(c, prot); });
 }
 
 function renderPartnerTable(p) {

@@ -163,7 +163,7 @@ export function renderStructurePanel(container, prot) {
         if (models[1]) models[1].m.setStyle({}, { cartoon: { color: PARTNER_TAN, thickness: 0.6 } });
         legend.push(`<span class="key"><span class="scale" style="background:var(--oe-grad);width:64px"></span>${escapeHTML(prot.gene_symbol)} residues contacting ${escapeHTML(partner.label)}, by missense O/E</span>`);
         legend.push(`<span class="key"><span class="tick" style="background:${BODY}"></span>rest of ${escapeHTML(prot.gene_symbol)}</span>`);
-        if (current.pchain) legend.push(`<span class="key"><span class="tick" style="background:${PARTNER_TAN}"></span>${escapeHTML(partner.label)}</span>`);
+        if (current.pchain) legend.push(`<span class="key"><span class="tick" style="background:${PARTNER_TAN}"></span>${escapeHTML(partner.label)} (partner)</span>`);
       }
     }
     $("s3-legend").innerHTML = legend.join("");
