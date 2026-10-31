@@ -11,7 +11,7 @@ const COLS = [
   { key: "p", label: "p (depletion)", title: "one-sided conditional binomial test, interface vs non-interface" },
   { key: "ni", label: "Interface res." },
   { key: "np", label: "Partners", title: "heteromeric structural partners" },
-  { key: "hq", label: "Partner heterogeneity", title: "BH-adjusted q, likelihood-ratio test of a common O/E across partners" },
+  { key: "hp", label: "Partner heterogeneity", title: "nominal p, likelihood-ratio test of a common O/E across partners (q = BH-adjusted)" },
   { key: "cv", label: "ClinVar P/LP", title: "ClinVar pathogenic / likely-pathogenic missense residues" },
   { key: "lof", label: "LOEUF", title: "gene-level pLoF O/E upper 90% bound" },
 ];
@@ -41,7 +41,7 @@ export function renderTable(container, rows, { page = 50, sortKey = "p", sortDir
       <td class="${r.sig ? "sig" : ""}">${pretty_p(r.p)}</td>
       <td>${int(r.ni)} <span class="tag">(${Math.round((r.fi || 0) * 100)}%)</span></td>
       <td>${int(r.np)}</td>
-      <td class="${r.hq != null && r.hq < 0.1 ? "het" : ""}">${r.hq == null ? "–" : pretty_q(r.hq)}</td>
+      <td class="${r.hp != null && r.hp >= 1.301 ? "het" : ""}">${r.hp == null ? "–" : pretty_p(r.hp, { ns: false })}${r.hq != null && r.hq < 0.1 ? ` <span class="tag">${pretty_q(r.hq)}</span>` : ""}</td>
       <td>${r.cv ? int(r.cv) : "–"}</td>
       <td>${fmt2(r.lof)}</td></tr>`).join("");
     container.innerHTML = `<div class="table-wrap"><table class="ranked"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
@@ -49,7 +49,7 @@ export function renderTable(container, rows, { page = 50, sortKey = "p", sortDir
       ${shown < rows.length ? `<button class="show-more" id="tbl-more">Show ${Math.min(page, rows.length - shown)} more</button>` : ""}
       <button class="show-more" id="tbl-csv">Download CSV (${int(rows.length)} rows)</button></div>`;
     container.querySelectorAll("th").forEach((th) => th.addEventListener("click", () => {
-      const k = th.dataset.k; if (sk === k) sd = -sd; else { sk = k; sd = k === "s" ? 1 : (k === "hq" || k === "lof" || k === "oi" || k === "gm" ? 1 : -1); }
+      const k = th.dataset.k; if (sk === k) sd = -sd; else { sk = k; sd = k === "s" ? 1 : (k === "lof" || k === "oi" || k === "gm" ? 1 : -1); }
       draw();
     }));
     container.querySelectorAll("tbody tr").forEach((tr) => {

@@ -9,6 +9,10 @@ import { prefetchProtein } from "./data.js";
 // Highlight pills: each picks out a subset of proteins in plain language. Active pills
 // combine with AND (each one narrows the set). The plot always shows every protein;
 // highlighted ones are drawn in colour, the rest fade into context.
+// Tunable pill parameters (the heterogeneity threshold has a slider on the landing page).
+export const PILL_PARAMS = { hetP: 0.05 };
+export const HET_STEPS = [0.05, 0.01, 0.005, 0.001, 0.0001];
+
 export const PILLS = [
   { key: "sig", label: "Significant interface depletion", test: (r) => r.sig,
     help: "Interface residues are significantly depleted of missense variation vs the rest of the protein (one-sided p < 0.05)" },
@@ -20,8 +24,8 @@ export const PILLS = [
     help: "Also binds other copies of itself (dimers, tetramers…) in a PDB structure" },
   { key: "partners", label: "2+ partners", test: (r) => r.np >= 2,
     help: "Structures show it binding at least two different proteins" },
-  { key: "het", label: "Partner-specific constraint", test: (r) => r.hq != null && r.hq < 0.1,
-    help: "Interface constraint differs between its partners (heterogeneity test, q < 0.1)" },
+  { key: "het", label: "Partner-specific constraint", test: (r) => r.hp != null && r.hp >= -Math.log10(PILL_PARAMS.hetP),
+    help: "Interface constraint differs between its partners (partner-heterogeneity test, nominal p below the slider threshold; default 0.05)" },
 ];
 export const DEFAULT_FILTERS = { pills: [], mode: "oe" };
 export const activePills = (f) => PILLS.filter((p) => (f.pills || []).includes(p.key));
@@ -127,7 +131,7 @@ export function renderOverview(container, allRows, { onSelect, filters = DEFAULT
       <span class="muted">non-interface O/E</span> ${fmt2(r.on)}<br>
       <span class="muted">whole-gene missense O/E</span> ${fmt2(r.gm)}${r.gm != null ? ` <span class="muted nowrap">(90% CI ${fmt2(r.gml)}–${fmt2(r.gmh)})</span>` : ""}<br>
       ${r.om || r.cv ? `<span class="muted">${[r.om ? "OMIM disease gene" : "", r.cv ? `${r.cv} ClinVar P/LP missense residue${r.cv === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ")}</span><br>` : ""}
-      <span class="muted">${pretty_p(r.p)}</span> · ${r.np} partner${r.np === 1 ? "" : "s"}${r.hq != null && r.hq < 0.1 ? " · <span style='color:var(--purple)'>partner heterogeneity</span>" : ""}<br>
+      <span class="muted">${pretty_p(r.p)}</span> · ${r.np} partner${r.np === 1 ? "" : "s"}${r.hp != null && r.hp >= 1.301 ? ` · <span style='color:var(--purple)'>partner-specific constraint (${pretty_p(r.hp, { ns: false })})</span>` : ""}<br>
       <span class="muted">click to open</span>`, evt);
   }).on("mouseleave", () => { hovered = null; drawHighlight(); hideTip(); })
     .on("click", () => { if (hovered && onSelect) onSelect(hovered.r); });

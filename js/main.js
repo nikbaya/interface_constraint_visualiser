@@ -3,7 +3,7 @@
 import { oeColor, oeGradient, setRamp, getRamp, fmt2, int, pretty_p, pretty_q, escapeHTML, bondList, TYPE_LABEL } from "./format.js";
 import { fetchJSON, loadProtein, indexMaps, prefetchProtein } from "./data.js";
 import { initSearch, lookup } from "./search.js";
-import { renderOverview, renderMini, matchPills, activePills, PILLS, DEFAULT_FILTERS } from "./overview.js";
+import { renderOverview, renderMini, matchPills, activePills, PILLS, PILL_PARAMS, HET_STEPS, DEFAULT_FILTERS } from "./overview.js";
 import { renderTable, renderGeneList } from "./table.js";
 import { renderHeadline } from "./headline.js";
 import { renderTrack, renderLaneToolbar } from "./residueTrack.js";
@@ -49,7 +49,10 @@ function renderLanding() {
   const count = (pill) => ROWS.reduce((n, r) => n + (pill.test(r) ? 1 : 0), 0);
   el("filters").innerHTML = `
     <div class="ctl-row"><span class="ctl-label">Highlight</span>
-      ${PILLS.map((p) => `<button type="button" class="pill-toggle" data-k="${p.key}" aria-pressed="false" title="${escapeHTML(p.help)}">${escapeHTML(p.label)} <span class="pt-n">${int(count(p))}</span></button>`).join("")}
+      ${PILLS.map((p) => `<button type="button" class="pill-toggle" data-k="${p.key}" aria-pressed="false" title="${escapeHTML(p.help)}">${escapeHTML(p.label)} <span class="pt-n">${int(count(p))}</span></button>` +
+        (p.key === "het" ? `<span class="pill-slider" hidden><label for="het-p">p &lt;</label>
+          <input id="het-p" type="range" min="0" max="${HET_STEPS.length - 1}" step="1" value="0" aria-label="partner-heterogeneity p-value threshold">
+          <b id="het-p-val">0.05</b></span>` : "")).join("")}
     </div>
     <p id="pill-summary" class="pill-summary"></p>
     <div class="ctl-row"><span class="ctl-label">Plot</span>
@@ -60,6 +63,13 @@ function renderLanding() {
       <div class="seg" role="radiogroup" data-f="view">
         <button type="button" data-v="table">Table</button><button type="button" data-v="cards">Cards</button><button type="button" data-v="list">Paste genes</button>
       </div></div>`;
+  // Heterogeneity threshold slider (shown while that pill is on): tighter p -> fewer proteins.
+  el("het-p").addEventListener("input", (e) => {
+    PILL_PARAMS.hetP = HET_STEPS[+e.target.value];
+    el("het-p-val").textContent = String(PILL_PARAMS.hetP);
+    document.querySelector('.pill-toggle[data-k="het"] .pt-n').textContent = int(count(PILLS.find((p) => p.key === "het")));
+    applyFilters();
+  });
   document.querySelectorAll(".pill-toggle").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.k, on = filters.pills.includes(k);
     filters.pills = on ? filters.pills.filter((x) => x !== k) : [...filters.pills, k];
@@ -78,9 +88,10 @@ function applyFilters() {
   // reflect state in the controls
   document.querySelectorAll(".pill-toggle").forEach((b) => { const on = filters.pills.includes(b.dataset.k); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
   document.querySelectorAll(".seg").forEach((g) => g.querySelectorAll("button").forEach((b) => { const on = filters[g.dataset.f] === b.dataset.v; b.classList.toggle("on", on); b.setAttribute("aria-checked", String(on)); }));
+  document.querySelector(".pill-slider").hidden = !filters.pills.includes("het");
   const act = activePills(filters);
   const rows = act.length ? ROWS.filter((r) => matchPills(r, filters)) : ROWS;
-  const names = act.map((p) => `<b>${escapeHTML(p.label)}</b>`);
+  const names = act.map((p) => `<b>${escapeHTML(p.label)}</b>${p.key === "het" ? ` (p < ${PILL_PARAMS.hetP})` : ""}`);
   el("pill-summary").innerHTML = act.length
     ? `Highlighting <b>${int(rows.length)}</b> of ${int(ROWS.length)} proteins: ${names.length > 1 ? names.slice(0, -1).join(", ") + " <i>and</i> " + names[names.length - 1] : names[0]}. They're outlined in the plot and listed below. <a href="#" id="pill-clear">Clear</a>`
     : `Click any of these to highlight those proteins in the plot and list them below (several together narrow the set).`;

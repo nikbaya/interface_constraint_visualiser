@@ -65,6 +65,10 @@ main { padding: 1.5rem 0 3rem; }
 .pill-toggle.on { background: var(--broad-blue); border-color: var(--broad-blue); color: #fff; }
 .pill-toggle.on .pt-n { color: rgba(255,255,255,.8); }
 .pill-toggle.on::before { content: "✓"; font-weight: 700; }
+.pill-slider { display: inline-flex; align-items: center; gap: .4rem; padding: .2rem .6rem; border: 1px dashed var(--broad-blue); border-radius: 999px; font-size: .88rem; color: var(--muted); margin-left: -.15rem; }
+.pill-slider[hidden] { display: none; }
+.pill-slider input[type="range"] { width: 110px; accent-color: var(--broad-blue); }
+.pill-slider b { color: var(--fg); min-width: 3.4em; font-variant-numeric: tabular-nums; }
 .pill-summary { margin: 0 0 .2rem calc(5.2rem + .5rem); font-size: .92rem; color: var(--muted); }
 .pill-summary b { color: var(--fg); }
 .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
