@@ -4,23 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Interface Constraint Visualiser</title>
-<meta name="description" content="How depleted of missense variation are protein-protein interface residues? Search a protein and explore interface constraint and its interacting partners.">
+<meta name="description" content="Missense constraint at protein–protein interface residues for 5,600+ human proteins: interface vs non-interface depletion, partner-resolved constraint, ClinVar variants and 3D structures.">
+<meta name="color-scheme" content="light">
 
-<!-- Social preview (Open Graph + Twitter card). Absolute URLs required. -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Interface Constraint Visualiser">
 <meta property="og:title" content="Are protein interface residues more constrained?">
-<meta property="og:description" content="Missense depletion and ClinVar pathogenic variants at protein–protein interfaces, residue by residue. Built from gnomAD v4.1 × Genomics2Proteins.">
+<meta property="og:description" content="Missense depletion at protein–protein interfaces, resolved by interaction partner, with ClinVar variants and 3D structures. Built from gnomAD v4.1 × Genomics2Proteins.">
 <meta property="og:url" content="https://nikbaya.github.io/interface_constraint_visualiser/">
 <meta property="og:image" content="https://nikbaya.github.io/interface_constraint_visualiser/assets/og-preview.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Interface Constraint Visualiser — coolwarm per-residue constraint track with pathogenic variants clustered at an interface.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Are protein interface residues more constrained?">
-<meta name="twitter:description" content="Missense depletion and ClinVar pathogenic variants at protein–protein interfaces, residue by residue.">
 <meta name="twitter:image" content="https://nikbaya.github.io/interface_constraint_visualiser/assets/og-preview.png">
 
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/layout.css">
 </head>
@@ -29,16 +28,19 @@
   <div class="wrap">
     <a class="brand" href="#/"><svg class="brand-mark" viewBox="0 0 12 17" aria-hidden="true">
       <defs><clipPath id="bm-lens"><circle cx="6" cy="5" r="5"/></clipPath></defs>
-      <circle cx="6" cy="5" r="5" fill="#c8ccd2"/>
-      <circle cx="6" cy="12" r="5" fill="#c8ccd2"/>
+      <circle cx="6" cy="5" r="5" fill="#c8ccd2"/><circle cx="6" cy="12" r="5" fill="#c8ccd2"/>
       <circle cx="6" cy="12" r="5" fill="var(--orange)" clip-path="url(#bm-lens)"/>
-    </svg> Interface Constraint Visualiser</a>
-    <form id="search-form" autocomplete="off">
-      <input id="search" list="gene-list" placeholder="Search a gene (TP53) or variant (17-7674220-C-T, GRCh38)" aria-label="Search a gene or variant">
-      <datalist id="gene-list"></datalist>
+    </svg> <span class="brand-text">Interface Constraint Visualiser</span></a>
+    <form id="search-form" autocomplete="off" role="search">
+      <input id="search" placeholder="Search…" aria-label="Search a gene, protein, residue or variant" autocapitalize="off" spellcheck="false">
+      <kbd class="search-kbd" aria-hidden="true">/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
     </form>
+    <nav class="top-nav"><a href="#/">Browse</a><a href="#/methods">Methods</a></nav>
   </div>
 </header>
+
+<div id="context-bar" class="context-bar" aria-hidden="true"><div class="wrap" id="context-bar-inner"></div></div>
 
 <main class="wrap">
   <!-- Landing -->
@@ -46,22 +48,21 @@
     <div class="hero">
       <div class="hero-text">
         <h1>Are protein <em>interface</em> residues more constrained?</h1>
-        <p class="lede">
-          Residues that sit at a protein&ndash;protein interface tend to be depleted of
-          missense variation in gnomAD. Search a protein to see its interface vs.
-          non-interface missense constraint (<strong>misOEUF</strong> &mdash; lower means more
-          constrained) and the interface constraint of its structural partners.
-        </p>
+        <p class="lede">Residues at protein–protein interfaces are depleted of missense variation in gnomAD.
+          Explore every human protein with a PDB-derived interface: interface vs non-interface
+          <strong>missense O/E</strong> (lower = more constrained), the same split <strong>by interaction partner</strong>,
+          ClinVar variants, and the structures themselves.</p>
+        <p id="stat-line" class="stat-line"></p>
       </div>
-      <figure class="hero-3d">
-        <div id="viewer3d"></div>
-        <figcaption id="viewer3d-cap"></figcaption>
-      </figure>
+      <figure class="hero-3d"><div id="viewer3d"></div><figcaption id="viewer3d-cap"></figcaption></figure>
     </div>
-    <h2 class="section-title">Proteins, ranked by interface depletion significance</h2>
-    <p id="card-hint" class="panel-note"></p>
-    <div id="card-grid" class="card-grid"></div>
-    <div id="card-more"></div>
+
+    <h2 class="section-title">All proteins at a glance</h2>
+    <div id="filters" class="filters"></div>
+    <div id="overview" class="panel overview"></div>
+
+    <h2 class="section-title">Ranked by interface depletion</h2>
+    <div id="list"></div>
   </section>
 
   <!-- Protein view -->
@@ -69,56 +70,64 @@
     <a class="back" href="#/">&larr; all proteins</a>
     <div id="protein-header"></div>
 
-    <h2 class="panel-title">Interface vs. non-interface constraint</h2>
-    <p class="panel-note">Pooled missense observed/expected (O/E) with 95% confidence intervals.
-      misOEUF is the upper bound; <strong>lower&nbsp;=&nbsp;more constrained</strong>.</p>
+    <h2 class="panel-title" id="sec-constraint">Interface vs non-interface constraint <span class="tag">— and by partner</span></h2>
+    <p class="panel-note">Pooled missense observed/expected (O/E) with 95% intervals. Expand <b>All interfaces</b> to split this protein's interface residues by the partner they contact; click a partner to follow it through every view.</p>
     <div id="headline" class="panel"></div>
 
-    <h2 class="panel-title">Per-residue missense constraint</h2>
-    <p class="panel-note">One bar per residue, coloured by missense O/E. Ticks above mark
-      inter-chain <strong>interface</strong> residues. Hover for detail.</p>
+    <h2 class="panel-title" id="sec-residues">Residue browser</h2>
+    <p class="panel-note">Drag on the overview strip (or scroll on the lanes) to zoom. Each lane shares the same axis: missense O/E per residue, interface residues, contact footprints per partner, ClinVar variants, UniProt annotations, secondary structure and AlphaFold confidence. Click a residue to pin it.</p>
+    <div id="track-toolbar" class="lane-toolbar"></div>
     <div id="track" class="panel"></div>
     <div id="legend" class="legend"></div>
 
     <div id="clinvar-section" hidden>
-      <h2 class="panel-title">ClinVar pathogenic variants at the interface</h2>
-      <p class="panel-note">Where known disease variants fall along the protein.
-        <strong style="color:var(--orange)">Interface</strong> residues are marked on the
-        baseline; <strong style="color:#b40426">pathogenic</strong> (P/LP) variants sit above,
-        <strong style="color:#3b4cc0">benign</strong> (B/LB) below. A ring marks a variant on an
-        interface residue.</p>
+      <h2 class="panel-title" id="sec-clinvar">ClinVar missense variants at the interface</h2>
       <p id="clinvar-headline" class="headline-stat"></p>
-      <div id="clinvar" class="panel"></div>
-      <div id="clinvar-legend" class="legend"></div>
     </div>
 
-    <h2 class="panel-title">Interacting partners</h2>
-    <p class="panel-note">Structural partners from inter-chain contacts. Node colour = the
-      partner&rsquo;s interface misOEUF; edge width = number of shared contact residues.
-      Hover a partner to highlight where it touches this protein; click a filled node to open it.</p>
+    <h2 class="panel-title" id="sec-structure">Structure with partner</h2>
+    <p class="panel-note">Fetched on demand from the RCSB / PDBe model servers (only the chains shown). The coloured patch on this protein's surface is its interface, coloured by missense O/E; the partner is the solid cartoon.</p>
+    <div id="structure3d" class="panel s3-panel"></div>
+
+    <h2 class="panel-title" id="sec-partners">Interacting partners</h2>
+    <p class="panel-note">Structural partners from inter-chain contacts. Node colour = this protein's O/E at its interface with that partner; edge width = number of contact residues. Click to select, double-click to open.</p>
     <div id="network" class="panel"></div>
     <div id="partner-table"></div>
+  </section>
+
+  <!-- Methods -->
+  <section id="methods" hidden class="methods">
+    <a class="back" href="#/">&larr; all proteins</a>
+    <h1>Methods</h1>
+    <h3>Data</h3>
+    <p><b>Per-residue constraint</b>: gnomAD v4.1 per-residue missense observed and expected counts (summed over all possible missense changes at a residue), keyed to the UniProt canonical sequence. <b>Interfaces</b>: Genomics2Proteins (G2P) inter-chain contacts from PDB structures — hydrogen bonds, non-bonded interactions, salt bridges and disulfides. A residue is an <em>interface residue</em> if it makes any inter-chain contact in any PDB entry. Proteins are included when every residue's reference amino acid agrees between gnomAD and G2P.</p>
+    <h3>Interface vs non-interface</h3>
+    <p>O/E = observed / expected missense, pooled over interface or non-interface residues. Intervals are two-sided 95% gamma (Poisson) intervals on the observed count. The depletion test is a one-sided conditional binomial (C-test, Przyborowski &amp; Wilenski 1940): given the total observed count, is the interface's share smaller than its share of expected? <em>Significant</em> means p &lt; 0.05, uncorrected. When O/E = 0 (no observed missense) the interval is unreliable at the boundary and is flagged.</p>
+    <h3>Partner-resolved constraint</h3>
+    <p>Each G2P contact names the partner chain in a PDB entry; the partner protein is identified because that chain appears as the <em>own</em> chain in another protein's G2P file (G2P-only mapping; chains claimed by no G2P protein — antibodies, non-human proteins, peptides — are pooled as <em>unidentified chain</em>). Interfaces seen in several entries are de-duplicated into binding modes (overlap coefficient ≥ 0.6, average linkage). For partner B, <em>this protein's interface with B</em> is the union of its residues contacting B in any entry; its O/E is compared with the rest of the protein by the same one-sided conditional binomial. <em>Partner heterogeneity</em> is a Poisson likelihood-ratio G-test of a common O/E across partners, on partner-exclusive residues only (so counts are independent), partners with expected ≥ 2, proteins with ≥ 2 such partners; q is Benjamini–Hochberg across tested proteins. Homomeric contacts (another copy of the same protein) are shown as a <em>homomer</em> row; contacts between two processed chains of one precursor are kept apart.</p>
+    <h3>ClinVar</h3>
+    <p>ClinVar (2026-04, GRCh38) single amino-acid substitutions, mapped by gene symbol and HGVS protein change. Residue-level: a residue counts once per category (P/LP, VUS, B/LB). Enrichment at the interface is a one-sided binomial of the P/LP interface share against the protein's interface fraction.</p>
+    <h3>Disease genes</h3>
+    <p><b>OMIM disease gene</b>: the gene has at least one OMIM morbidmap phenotype with mapping key 3 (molecular basis known), excluding non-disease <code>[…]</code>, susceptibility <code>{…}</code> and provisional <code>?</code> entries (morbidmap 2026-02-13). Only this flag and a link to the OMIM entry are shown. <b>ClinVar P/LP</b>: at least one pathogenic / likely-pathogenic missense substitution in ClinVar (see above).</p>
+    <h3>Structures</h3>
+    <p>For each partner, the representative entry is the binding mode with most PDB support, taking the instance with most contact residues. Coordinates are fetched from the <a href="https://models.rcsb.org" target="_blank" rel="noopener">RCSB ModelServer</a> (chain subsets), falling back to PDBe. UniProt↔PDB numbering uses SIFTS segments stored at export; chains without a stored mapping assume UniProt numbering (noted in the panel).</p>
+    <h3>Reproducibility &amp; caveats</h3>
+    <p>All numbers on this site are aggregated, derived values precomputed from the analysis repository; raw gnomAD and structural data never ship. Interfaces are limited to proteins and partners with solved structures, so absence of a partner means no structure, not no interaction. Expected counts are gnomAD's mutational-model expectations; residues with no expected count are shown in grey.</p>
+    <h3>Cite</h3>
+    <p class="cite">Interface Constraint Visualiser (2026). https://nikbaya.github.io/interface_constraint_visualiser/ — built from gnomAD v4.1 (Chen et al. 2024), Genomics2Proteins (Kwon et al. 2024), ClinVar, PDB/SIFTS.</p>
   </section>
 
   <section id="error" hidden></section>
 </main>
 
-<footer>
-  <div class="wrap">
-    Built from gnomAD v4.1 constraint &times; Genomics2Proteins interface structures.
-    Aggregated, derived data only. &middot;
-    <a href="https://github.com/nikbaya/interface_constraint_visualiser">source</a>
-  </div>
-</footer>
+<footer><div class="wrap">Built from gnomAD v4.1 constraint × Genomics2Proteins interface structures. Aggregated, derived data only. ·
+  <a href="#/methods">methods</a> · <a href="https://github.com/nikbaya/interface_constraint_visualiser">source</a></div></footer>
 
 <div id="tooltip" class="tooltip" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/3dmol@2.4.2/build/3Dmol-min.js"></script>
 <script type="module" src="js/main.js"></script>
-
-<!-- GoatCounter analytics (privacy-friendly, no cookies) -->
-<script data-goatcounter="https://n-i-k.goatcounter.com/count"
-        async src="//gc.zgo.at/count.js"></script>
+<script data-goatcounter="https://n-i-k.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>

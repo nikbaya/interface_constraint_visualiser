@@ -1,26 +1,14 @@
 :root {
-  /* Broad Institute palette (mirrors complex_constraint plotting/style.py) */
-  --broad-blue: #006DB6;
-  --dark-broad-blue: #09395F;
-  --light-broad-blue: #A1CEF5;
-  --orange: #F36C3E;
-  --dark-orange: #B64424;
-  --green: #80BC42;
-  --purple: #69488E;
-  --red: #B12028;
-  --yellow: #FFCD00;
+  /* Broad Institute palette (mirrors complex_constraint constants.py) */
+  --broad-blue: #006DB6; --dark-broad-blue: #09395F; --light-broad-blue: #A1CEF5;
+  --orange: #F36C3E; --dark-orange: #B64424; --green: #80BC42; --purple: #69488E;
+  --red: #B12028; --yellow: #FFCD00;
 
-  --fg: #1a1a1a;
-  --muted: #63666A;
-  --line: #e4e4ea;
-  --bg: #ffffff;
-  --bg-soft: #f6f8fa;
-
-  /* Diverging O/E scale (coolwarm): red = constrained -> white -> blue = tolerant */
-  --oe-low: #b2182b;   /* O/E ~ 0  (strongly constrained, RED) */
-  --oe-mid: #f7f7f7;   /* O/E ~ 1  (neutral) */
-  --oe-high: #2166ac;  /* O/E >= 2 (tolerant, BLUE) */
-
-  --interface: #F36C3E;   /* interface = Broad orange */
-  --noninterface: #9aa0a6;
+  --fg: #1a1a1a; --muted: #63666A; --line: #e4e4ea; --line-strong: #c8cdd3;
+  --bg: #ffffff; --bg-soft: #f6f8fa; --sel-bg: #eef4fb; --nodata: #cfd3d8;
+  --domain: #dbe7f5; --domain-line: #9fb9d9; --region: #ecebf1;
+  --interface: #F36C3E; --noninterface: #9aa0a6;
+  --oe-grad: linear-gradient(90deg,#b40426,#f7f7f7 50%,#3b4cc0);
+  --tip-bg: #ffffff; --tip-fg: #1a1a1a; --tip-muted: #63666A; --tip-line: #dfe2e6;
+  color-scheme: light;
 }

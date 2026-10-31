@@ -1,84 +1,123 @@
-// Headline: interface vs non-interface pooled missense O/E with 95% CI whiskers.
-import { fmt2 } from "./format.js";
-import { showTip, moveTip, hideTip } from "./tooltip.js";
+// Headline forest plot: interface vs non-interface pooled missense O/E (95% CI),
+// with the interface row expandable into one row per structural partner
+// (partner-resolved constraint). Clicking a partner row selects that partner
+// everywhere (track lanes, network, 3D view).
+import { fmt2, pretty_p, pretty_q, escapeHTML, TYPE_LABEL, bondList } from "./format.js";
+import { showTip, hideTip } from "./tooltip.js";
+import * as S from "./state.js";
 
-export function renderHeadline(container, summary, pioneer) {
+export function renderHeadline(container, prot) {
   container.innerHTML = "";
-  const rows = [
-    { key: "interface", label: "G2P interface", color: "var(--interface)", d: summary.interface },
-    { key: "pioneer", label: "PIONEER interface", color: "var(--purple)", d: pioneer && pioneer.interface },
-    { key: "noninterface", label: "Non-interface", color: "var(--noninterface)", d: summary.noninterface },
-  ].filter((r) => r.d && r.d.oe != null);
-  if (!rows.length) { container.innerHTML = '<p class="panel-note">No pooled constraint available.</p>'; return; }
+  const s = prot.summary;
+  const partners = (prot.partners || []).filter((p) => p.oe && p.oe.oe != null);
+  let expanded = !!S.get().partner || partners.length <= 6;
+  let unsub = null;
 
-  const M = { top: 16, right: 70, bottom: 34, left: 132 };
-  const W = Math.max(container.clientWidth || 920, 360);
-  const rowH = 46;
-  const H = M.top + rows.length * rowH + M.bottom;
-  const innerW = W - M.left - M.right;
-
-  const maxX = Math.max(1.05, d3.max(rows, (r) => r.d.ci_high ?? r.d.oe) * 1.08);
-  const x = d3.scaleLinear().domain([0, maxX]).range([0, innerW]).nice();
-
-  const svg = d3.select(container).append("svg")
-    .attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
-  const g = svg.append("g").attr("transform", `translate(${M.left},${M.top})`);
-
-  // O/E = 1 reference.
-  g.append("line").attr("x1", x(1)).attr("x2", x(1)).attr("y1", -4).attr("y2", rows.length * rowH - 8)
-    .attr("stroke", "var(--muted)").attr("stroke-dasharray", "3,3").attr("stroke-width", 1).attr("opacity", .6);
-  g.append("text").attr("x", x(1)).attr("y", -6).attr("text-anchor", "middle")
-    .attr("font-size", 10).attr("fill", "var(--muted)").text("O/E = 1");
-
-  // Axis.
-  g.append("g").attr("transform", `translate(0,${rows.length * rowH - 8})`)
-    .call(d3.axisBottom(x).ticks(6))
-    .call((s) => s.select(".domain").attr("stroke", "var(--line)"))
-    .call((s) => s.selectAll("text").attr("fill", "var(--muted)").attr("font-size", 10));
-  g.append("text").attr("x", innerW / 2).attr("y", rows.length * rowH + 22)
-    .attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "var(--muted)")
-    .text("missense observed / expected");
-
-  // O/E = 0 (no observed variants): the point estimate sits on the boundary, so
-  // the 95% interval is unreliable (normal/Wald approximation breaks down there).
-  const isZero = (r) => r.d.oe === 0;
-
-  rows.forEach((r, i) => {
-    const cy = i * rowH + rowH / 2 - 6;
-    const zero = isZero(r);
-    const row = g.append("g")
-      .style("cursor", "default")
-      .on("mousemove", (evt) => showTip(
-        `<b>${r.label}</b><br><span class="muted">O/E</span> ${fmt2(r.d.oe)} ` +
-        `<span class="muted">(95% CI ${fmt2(r.d.ci_low)}–${fmt2(r.d.ci_high)})</span><br>` +
-        `<span class="muted">misOEUF</span> <b>${fmt2(r.d.ci_high)}</b> · ` +
-        `<span class="muted">obs ${r.d.obs} / exp ${fmt2(r.d.exp)}</span>` +
-        (zero ? `<br><span style="color:var(--red)">⚠ O/E = 0 (0 observed) — 95% CI unreliable</span>` : ""), evt))
-      .on("mouseleave", hideTip);
-
-    row.append("text").attr("x", -12).attr("y", cy + 4).attr("text-anchor", "end")
-      .attr("font-size", 12).attr("fill", "var(--fg)").attr("font-weight", 600).text(r.label);
-    // CI whisker.
-    if (r.d.ci_low != null) {
-      row.append("line").attr("x1", x(r.d.ci_low)).attr("x2", x(r.d.ci_high)).attr("y1", cy).attr("y2", cy)
-        .attr("stroke", r.color).attr("stroke-width", 2).attr("opacity", .5);
-      [r.d.ci_low, r.d.ci_high].forEach((v) =>
-        row.append("line").attr("x1", x(v)).attr("x2", x(v)).attr("y1", cy - 4).attr("y2", cy + 4)
-          .attr("stroke", r.color).attr("stroke-width", 1.5).attr("opacity", .5));
+  function rowsForDraw() {
+    const base = [
+      { key: "interface", label: "All interfaces", color: "var(--interface)", d: s.interface, main: true, n: s.n_interface_residues },
+    ];
+    if (expanded) {
+      const sorted = partners.slice().sort((a, b) => (a.oe.oe - b.oe.oe) || (b.contacts_self.length - a.contacts_self.length));
+      for (const p of sorted) base.push({ key: p.uniprot_id, label: p.label, color: p.color, d: p.oe, partner: p, sub: true });
     }
-    // Point.
-    row.append("circle").attr("cx", x(r.d.oe)).attr("cy", cy).attr("r", 6)
-      .attr("fill", r.color).attr("stroke", "#fff").attr("stroke-width", 1.5);
-    // Value label (asterisk flags the unreliable O/E = 0 interval).
-    row.append("text").attr("x", x(r.d.ci_high) + 8).attr("y", cy + 4)
-      .attr("font-size", 12).attr("fill", zero ? "var(--red)" : "var(--muted)")
-      .attr("font-variant-numeric", "tabular-nums")
-      .text(fmt2(r.d.oe) + (zero ? " *" : ""));
-  });
-
-  // Footnote when any row is at the O/E = 0 boundary.
-  if (rows.some(isZero)) {
-    container.insertAdjacentHTML("beforeend",
-      `<p class="panel-note" style="margin-top:.2rem">* O/E = 0 (no observed missense variants) — the 95% CI is unreliable at the boundary (normal/Wald approximation breaks down).</p>`);
+    base.push({ key: "noninterface", label: "Non-interface", color: "var(--noninterface)", d: s.noninterface, main: true });
+    return base.filter((r) => r.d && r.d.oe != null);
   }
+
+  function draw() {
+    container.innerHTML = "";
+    const rows = rowsForDraw();
+    if (!rows.length) { container.innerHTML = '<p class="panel-note">No pooled constraint available.</p>'; return; }
+    const sel = S.get().partner;
+    const W = Math.max(container.clientWidth || 920, 300);
+    const narrow = W < 600;
+    const M = { top: 20, right: narrow ? 64 : 170, bottom: 42, left: narrow ? 112 : 160 };
+    const rowH = (r) => (r.sub ? 25 : 44);
+    const totalH = d3.sum(rows, rowH);
+    const H = M.top + totalH + M.bottom;
+    const innerW = W - M.left - M.right;
+    const maxX = Math.max(1.25, d3.min([2.5, d3.max(rows, (r) => r.d.ci_high ?? r.d.oe) * 1.05]));
+    const x = d3.scaleLinear().domain([0, maxX]).range([0, innerW]);
+
+    const svg = d3.select(container).append("svg").attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`).attr("class", "forest");
+    const g = svg.append("g").attr("transform", `translate(${M.left},${M.top})`);
+    g.append("line").attr("x1", x(1)).attr("x2", x(1)).attr("y1", -6).attr("y2", totalH).attr("stroke", "var(--muted)").attr("stroke-dasharray", "3,3").attr("opacity", .6);
+    g.append("text").attr("x", x(1)).attr("y", -8).attr("text-anchor", "middle").attr("font-size", 12).attr("fill", "var(--muted)").text("O/E = 1");
+    // Reference band: the rest-of-protein / non-interface O/E for context behind the partner rows.
+    g.append("g").attr("transform", `translate(0,${totalH})`).call(d3.axisBottom(x).ticks(6))
+      .call((a) => a.select(".domain").attr("stroke", "var(--line)")).call((a) => a.selectAll("text").attr("fill", "var(--muted)").attr("font-size", 12));
+    g.append("text").attr("x", innerW / 2).attr("y", totalH + 34).attr("text-anchor", "middle").attr("font-size", 13).attr("fill", "var(--muted)").text("missense observed / expected (95% CI)");
+
+    let yCur = 0;
+    rows.forEach((r) => {
+      const h = rowH(r), cy = yCur + h / 2; yCur += h;
+      const zero = r.d.oe === 0;
+      const isSel = r.partner && r.partner.uniprot_id === sel;
+      const row = g.append("g").attr("class", "forest-row" + (r.sub ? " sub" : "") + (isSel ? " selected" : ""))
+        .style("cursor", r.partner ? "pointer" : (r.main && r.key === "interface" && partners.length ? "pointer" : "default"));
+      if (r.sub) row.append("rect").attr("x", -M.left + 4).attr("y", cy - h / 2).attr("width", W - 8).attr("height", h).attr("fill", isSel ? "var(--sel-bg)" : "transparent").attr("rx", 4);
+      if (r.sub && r.d.oe_rest != null)   // rest-of-protein reference tick for partner rows
+        row.append("line").attr("x1", x(r.d.oe_rest)).attr("x2", x(r.d.oe_rest)).attr("y1", cy - 7).attr("y2", cy + 7).attr("stroke", "var(--muted)").attr("stroke-width", 1).attr("opacity", .5);
+      if (r.d.ci_low != null) {
+        row.append("line").attr("x1", x(Math.min(r.d.ci_low, maxX))).attr("x2", x(Math.min(r.d.ci_high, maxX))).attr("y1", cy).attr("y2", cy)
+          .attr("stroke", r.color).attr("stroke-width", r.sub ? 1.5 : 2.2).attr("opacity", .55);
+        if (r.d.ci_high > maxX) row.append("path").attr("d", `M${x(maxX)},${cy} l-5,-3 l0,6 Z`).attr("fill", r.color).attr("opacity", .55);
+        else [r.d.ci_low, r.d.ci_high].forEach((v) => row.append("line").attr("x1", x(v)).attr("x2", x(v)).attr("y1", cy - (r.sub ? 3 : 4)).attr("y2", cy + (r.sub ? 3 : 4)).attr("stroke", r.color).attr("stroke-width", 1.5).attr("opacity", .55));
+      }
+      row.append("circle").attr("cx", x(Math.min(r.d.oe, maxX))).attr("cy", cy).attr("r", r.sub ? 4 : 6.5).attr("fill", r.color).attr("stroke", "var(--bg)").attr("stroke-width", 1.5);
+      // Left label
+      const lab = row.append("text").attr("x", r.sub ? -16 : -12).attr("y", cy + 4).attr("text-anchor", "end").attr("font-size", r.sub ? 12.5 : 14)
+        .attr("fill", "var(--fg)").attr("font-weight", r.sub ? (isSel ? 700 : 500) : 600).text(r.label);
+      if (r.sub) row.append("circle").attr("cx", -8).attr("cy", cy).attr("r", 3.5).attr("fill", r.color);
+      if (r.key === "interface" && partners.length) {
+        lab.text(`${expanded ? "▾" : "▸"} All interfaces`).attr("fill", "var(--broad-blue)");
+      }
+      // Right label: value + n + p
+      const right = narrow ? `${fmt2(r.d.oe)}${zero ? " *" : ""}` : r.sub
+        ? `${fmt2(r.d.oe)}${zero ? " *" : ""}  ·  ${r.d.n} res  ·  ${pretty_p(r.d.log10p)}`
+        : `${fmt2(r.d.oe)}${zero ? " *" : ""}${r.n != null ? `  ·  ${r.n} residues` : ""}`;
+      row.append("text").attr("x", innerW + 10).attr("y", cy + 4).attr("font-size", r.sub ? 12 : 13.5).attr("fill", zero ? "var(--red)" : "var(--muted)")
+        .attr("font-variant-numeric", "tabular-nums").text(right);
+      row.on("mousemove", (evt) => showTip(tipHTML(r, zero), evt)).on("mouseleave", hideTip)
+        .on("click", () => {
+          if (r.partner) S.set({ partner: isSel ? null : r.partner.uniprot_id });
+          else if (r.key === "interface" && partners.length) { expanded = !expanded; draw(); }
+        });
+    });
+
+    // Heterogeneity badge + footnotes under the plot
+    const notes = [];
+    if (expanded && prot.heterogeneity) {
+      const h = prot.heterogeneity;
+      const sig = h.q != null && h.q < 0.1;
+      notes.push(`<span class="het-badge ${sig ? "sig" : ""}">Partner heterogeneity: ${pretty_p(h.log10p, { ns: false })} · ${pretty_q(h.q)} <span class="tag">(G = ${h.G}, df = ${h.df}, over ${h.n_partners} partners with partner-exclusive residues)</span></span>`);
+    } else if (expanded && partners.length >= 2) {
+      notes.push(`<span class="tag">Partner heterogeneity not testable (needs ≥ 2 partners with ≥ 2 expected missense on partner-exclusive residues).</span>`);
+    }
+    if (expanded && partners.length) notes.push(`<span class="tag">Each partner row: this protein's residues contacting that partner; tick = O/E of the rest of the protein; p = one-sided test vs the rest. Click a row to select the partner.</span>`);
+    if (rows.some((r) => r.d.oe === 0)) notes.push(`<span class="tag">* O/E = 0 (no observed missense) — the interval is unreliable at the boundary.</span>`);
+    if (notes.length) container.insertAdjacentHTML("beforeend", `<p class="panel-note forest-notes">${notes.join("<br>")}</p>`);
+  }
+
+  function tipHTML(r, zero) {
+    let h = `<b>${escapeHTML(r.label)}</b>`;
+    if (r.partner) h += ` <span class="muted">${r.partner.uniprot_id} · ${TYPE_LABEL[r.partner.type] || r.partner.type}</span>`;
+    h += `<br><span class="muted">O/E</span> ${fmt2(r.d.oe)} <span class="muted">(95% CI ${fmt2(r.d.ci_low)}–${fmt2(r.d.ci_high)})</span>` +
+      `<br><span class="muted">obs ${r.d.obs} / exp ${fmt2(r.d.exp)}</span>`;
+    if (r.partner) {
+      const p = r.partner;
+      h += `<br><span class="muted">${p.contacts_self.length} contact residues · ${bondList(p.bond_types)} · ${p.n_pdbs} PDB entries</span>`;
+      h += `<br><span class="muted">vs rest of protein (O/E ${fmt2(r.d.oe_rest)}):</span> ${pretty_p(r.d.log10p, { ns: false })}`;
+      if (p.oe_exclusive && p.oe_exclusive.oe != null) h += `<br><span class="muted">partner-exclusive residues only:</span> O/E ${fmt2(p.oe_exclusive.oe)} (${p.oe_exclusive.n} res)`;
+      if (p.partner_side && p.partner_side.oe != null) h += `<br><span class="muted">${escapeHTML(p.label)}'s side of this interface:</span> O/E ${fmt2(p.partner_side.oe)}`;
+      h += `<br><span class="muted">click to ${S.get().partner === p.uniprot_id ? "deselect" : "select"}</span>`;
+    }
+    if (zero) h += `<br><span style="color:var(--red)">⚠ O/E = 0 — interval unreliable</span>`;
+    return h;
+  }
+
+  draw();
+  unsub = S.subscribe((st, changed) => { if (changed.includes("partner")) { if (st.partner) expanded = true; draw(); } });
+  return { destroy: () => unsub && unsub(), redraw: draw };
 }
