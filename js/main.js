@@ -49,15 +49,21 @@ function renderLanding() {
     <label class="chip"><input type="checkbox" data-f="sig"> significant only</label>
     <label class="chip">partners ≥ <select data-f="minPartners"><option>0</option><option>1</option><option>2</option><option>3</option><option>5</option><option>10</option></select></label>
     <label class="chip"><input type="checkbox" data-f="het"> partner heterogeneity (q &lt; 0.1)</label>
-    <label class="chip" title="Highlight disease genes in the plot (others fade) and list only them below">disease genes <select data-f="disease">
-      <option value="all">all</option><option value="clinvar">ClinVar P/LP missense</option><option value="omim">OMIM disease gene</option>
-      <option value="either">ClinVar P/LP or OMIM</option><option value="both">ClinVar P/LP and OMIM</option><option value="neither">neither</option></select></label>
+    <div class="ms" id="ms-disease">
+      <button type="button" class="chip ms-btn" aria-haspopup="true" aria-expanded="false" title="Highlight disease genes in the plot (others fade) and list only them below">disease genes: <span class="ms-val">all</span> <span class="ms-caret">▾</span></button>
+      <div class="ms-menu" role="menu" hidden>
+        <div class="ms-row"><label><input type="checkbox" value="clinvar"> ClinVar P/LP missense</label><button type="button" class="ms-only" data-only="clinvar">only</button></div>
+        <div class="ms-row"><label><input type="checkbox" value="omim"> OMIM disease gene</label><button type="button" class="ms-only" data-only="omim">only</button></div>
+        <div class="ms-foot"><span class="tag">matches any ticked category</span><button type="button" class="ms-clear">clear</button></div>
+      </div>
+    </div>
     <label class="chip" title="Homomer = the protein also binds other copies of itself (e.g. dimers, tetramers) in a PDB structure">self-interaction <select data-f="selfint">
       <option value="any">any</option><option value="homomer">forms homomers</option><option value="nohomomer">no homomer</option></select></label>
     <span class="chip-sep"></span>
     <label class="chip">plot <select data-f="mode"><option value="oe">interface vs non-interface O/E</option><option value="gene">interface vs whole-gene O/E</option><option value="volcano">volcano (effect vs p)</option></select></label>
     <label class="chip">list <select data-f="view"><option value="table">table</option><option value="cards">cards</option><option value="list">paste a gene list</option></select></label>`;
   f.querySelector('[data-f="view"]').value = filters.view;
+  initDiseaseMenu(f.querySelector("#ms-disease"));
   f.querySelectorAll("[data-f]").forEach((c) => c.addEventListener("change", () => {
     const k = c.dataset.f;
     filters[k] = c.type === "checkbox" ? c.checked : (k === "minPartners" ? +c.value : c.value);
@@ -66,6 +72,28 @@ function renderLanding() {
   }));
   overview = renderOverview(el("overview"), ROWS, { filters, onSelect: (r) => (location.hash = `#/${r.u}`) });
   applyFilters();
+}
+
+// Disease-gene multi-select: two tick boxes (ClinVar P/LP, OMIM) with "only" shortcuts.
+// none ticked -> no highlight; one -> that set; both -> either.
+function initDiseaseMenu(root) {
+  const btn = root.querySelector(".ms-btn"), menu = root.querySelector(".ms-menu");
+  const boxes = [...root.querySelectorAll('input[type="checkbox"]')];
+  const LABEL = { all: "all", clinvar: "ClinVar P/LP", omim: "OMIM", either: "ClinVar P/LP or OMIM" };
+  const sync = () => {
+    const on = boxes.filter((b) => b.checked).map((b) => b.value);
+    filters.disease = on.length === 2 ? "either" : on.length === 1 ? on[0] : "all";
+    root.querySelector(".ms-val").textContent = LABEL[filters.disease];
+    btn.classList.toggle("active", filters.disease !== "all");
+    applyFilters();
+  };
+  const open = (v) => { menu.hidden = !v; btn.setAttribute("aria-expanded", String(v)); };
+  btn.addEventListener("click", (e) => { e.stopPropagation(); open(menu.hidden); });
+  boxes.forEach((b) => b.addEventListener("change", sync));
+  root.querySelectorAll(".ms-only").forEach((o) => o.addEventListener("click", () => { boxes.forEach((b) => (b.checked = b.value === o.dataset.only)); sync(); }));
+  root.querySelector(".ms-clear").addEventListener("click", () => { boxes.forEach((b) => (b.checked = false)); sync(); });
+  document.addEventListener("click", (e) => { if (!root.contains(e.target)) open(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") open(false); });
 }
 
 function applyFilters() {
