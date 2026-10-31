@@ -10,9 +10,11 @@ ClinVar variants, and the protein's structure with each partner.
 
 ## What it shows
 
-- **Overview** — every protein on one scatter (interface vs non-interface O/E, or
-  a volcano of effect vs significance), with filters, a sortable ranked table, and a
-  paste-a-gene-list mode.
+- **Overview** — every protein on one scatter (interface O/E vs the rest of the
+  protein, or vs whole-gene O/E from gnomAD's gene-level table). One-click
+  *highlight* pills (significant depletion, ClinVar P/LP, OMIM, homomers, 2+
+  partners, partner-specific constraint) light up a subset and list it in a
+  sortable table; plus cards and a paste-a-gene-list mode.
 - **Interface vs non-interface constraint** — pooled missense O/E with 95%
   intervals and a one-sided conditional binomial depletion test; expand the
   interface row into one row per structural partner, with a partner-heterogeneity

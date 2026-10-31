@@ -1,26 +1,31 @@
 // Landing-page overview of every protein: canvas scatter (interface O/E vs
-// non-interface O/E, or a volcano of effect vs significance) with hover,
+// non-interface O/E, or vs whole-gene O/E) with hover,
 // click-through, shared filters, and a small "you are here" version for the
 // protein page.
 import { fmt2, pretty_p, escapeHTML, int } from "./format.js";
 import { showTip, hideTip } from "./tooltip.js";
 import { prefetchProtein } from "./data.js";
 
-export const DEFAULT_FILTERS = { sig: false, minPartners: 0, het: false, disease: "all", selfint: "any", mode: "oe" };
-
-// Disease-gene annotation: ClinVar P/LP missense residues and/or OMIM disease gene.
-export const DISEASE_LABEL = { clinvar: "with ClinVar P/LP missense", omim: "OMIM disease genes", either: "ClinVar P/LP or OMIM", both: "ClinVar P/LP and OMIM", neither: "neither ClinVar P/LP nor OMIM" };
-export function matchDisease(r, d) {
-  const cv = r.cv > 0, om = !!r.om;
-  return d === "clinvar" ? cv : d === "omim" ? om : d === "either" ? cv || om : d === "both" ? cv && om : d === "neither" ? !cv && !om : true;
-}
-
-// Filters that remove proteins (the disease setting highlights in the plot instead; see renderOverview).
-export function filterRows(rows, f) {
-  return rows.filter((r) =>
-    (!f.sig || r.sig) && (r.np >= (f.minPartners || 0)) && (!f.het || (r.hq != null && r.hq < 0.1)) &&
-    (f.selfint === "homomer" ? r.hm : f.selfint === "nohomomer" ? !r.hm : true));
-}
+// Highlight pills: each picks out a subset of proteins in plain language. Active pills
+// combine with AND (each one narrows the set). The plot always shows every protein;
+// highlighted ones are drawn in colour, the rest fade into context.
+export const PILLS = [
+  { key: "sig", label: "Significant interface depletion", test: (r) => r.sig,
+    help: "Interface residues are significantly depleted of missense variation vs the rest of the protein (one-sided p < 0.05)" },
+  { key: "clinvar", label: "ClinVar P/LP variants", test: (r) => r.cv > 0,
+    help: "At least one pathogenic / likely-pathogenic missense variant in ClinVar" },
+  { key: "omim", label: "OMIM disease gene", test: (r) => !!r.om,
+    help: "OMIM phenotype with a known molecular basis (mapping key 3)" },
+  { key: "homomer", label: "Forms homomers", test: (r) => !!r.hm,
+    help: "Also binds other copies of itself (dimers, tetramers…) in a PDB structure" },
+  { key: "partners", label: "2+ partners", test: (r) => r.np >= 2,
+    help: "Structures show it binding at least two different proteins" },
+  { key: "het", label: "Partner-specific constraint", test: (r) => r.hq != null && r.hq < 0.1,
+    help: "Interface constraint differs between its partners (heterogeneity test, q < 0.1)" },
+];
+export const DEFAULT_FILTERS = { pills: [], mode: "oe" };
+export const activePills = (f) => PILLS.filter((p) => (f.pills || []).includes(p.key));
+export function matchPills(r, f) { return activePills(f).every((p) => p.test(r)); }
 
 const COL = { sig: "#F36C3E", ns: "#8d939a", hi: "#111" };
 
@@ -43,47 +48,28 @@ export function renderOverview(container, allRows, { onSelect, filters = DEFAULT
   const hiG = g.append("g");
   const count = d3.select(container).append("p").attr("class", "panel-note ov-count");
 
-  let rows = [], x, y, mode = filters.mode || "oe", disease = filters.disease || "all", qt, hovered = null, pinned = null;
+  let rows = [], x, y, mode = filters.mode || "oe", cur = filters, qt, hovered = null, pinned = null;
 
+  // Two views, both O/E vs O/E on a shared 0–1.6 scale: y = interface O/E;
+  // x = rest of the protein ("oe") or the whole gene from gnomAD's gene table ("gene").
+  const narrow = W < 600;   // phones: shorter axis titles, no in-plot annotation
   function coords(r) {
-    if (mode === "gene") return [Math.min(r.gm ?? 0, 1.6), Math.min(r.oi ?? 0, 1.6)];
-    if (mode === "volcano") {
-      const eff = r.oi > 0 && r.on > 0 ? Math.log2(r.oi / r.on) : (r.oi === 0 ? -4 : 0);
-      return [Math.max(-4, Math.min(4, eff)), Math.min(r.p || 0, 40)];
-    }
-    return [Math.min(r.on ?? 0, 1.6), Math.min(r.oi ?? 0, 1.6)];
+    return [Math.min((mode === "gene" ? r.gm : r.on) ?? 0, 1.6), Math.min(r.oi ?? 0, 1.6)];
   }
   function setScales() {
-    if (mode === "volcano") {
-      x = d3.scaleLinear().domain([-4, 4]).range([0, iw]);
-      const ymax = Math.max(5, d3.max(rows, (r) => Math.min(r.p || 0, 40)) || 5);
-      y = d3.scaleLinear().domain([0, ymax]).range([ih, 0]).nice();
-      labX.text("log₂(interface O/E ÷ non-interface O/E)   ← interface more constrained");
-      labY.text("−log₁₀ p (interface depletion)");
-    } else if (mode === "gene") {
-      x = d3.scaleLinear().domain([0, 1.6]).range([0, iw]);
-      y = d3.scaleLinear().domain([0, 1.6]).range([ih, 0]);
-      labX.text("whole-gene missense O/E (gnomAD v4.1 gene-level constraint)");
-      labY.text("interface missense O/E");
-    } else {
-      x = d3.scaleLinear().domain([0, 1.6]).range([0, iw]);
-      y = d3.scaleLinear().domain([0, 1.6]).range([ih, 0]);
-      labX.text("non-interface missense O/E");
-      labY.text("interface missense O/E");
-    }
-    axX.call(d3.axisBottom(x).ticks(8)).call(style);
+    x = d3.scaleLinear().domain([0, 1.6]).range([0, iw]);
+    y = d3.scaleLinear().domain([0, 1.6]).range([ih, 0]);
+    labX.text(mode === "gene"
+      ? (narrow ? "whole-gene missense O/E (gnomAD)" : "whole-gene missense O/E (gnomAD v4.1 gene-level constraint)")
+      : (narrow ? "rest-of-protein missense O/E" : "non-interface missense O/E (rest of the protein)"));
+    labY.text("interface missense O/E");
+    axX.call(d3.axisBottom(x).ticks(narrow ? 4 : 8)).call(style);
     axY.call(d3.axisLeft(y).ticks(6)).call(style);
     ref.selectAll("*").remove();
-    if (mode === "volcano") {
-      ref.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", 0).attr("y2", ih).attr("stroke", "var(--line)").attr("stroke-dasharray", "3,3");
-      ref.append("line").attr("x1", 0).attr("x2", iw).attr("y1", y(1.301)).attr("y2", y(1.301)).attr("stroke", "var(--line)").attr("stroke-dasharray", "3,3");
-      ref.append("text").attr("x", iw - 4).attr("y", y(1.301) - 4).attr("text-anchor", "end").attr("font-size", 12).attr("fill", "var(--muted)").text("p = 0.05");
-    } else {
-      ref.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(1.6)).attr("y2", y(1.6)).attr("stroke", "var(--line)").attr("stroke-dasharray", "3,3");
-      ref.append("text").attr("x", x(1.55)).attr("y", y(1.55) - 6).attr("text-anchor", "end").attr("font-size", 12).attr("fill", "var(--muted)").text("equal O/E");
-      ref.append("text").attr("x", 6).attr("y", 14).attr("font-size", 12).attr("fill", "var(--muted)")
-        .text(mode === "gene" ? "below the line = interface more constrained than the gene as a whole" : "below the line = interface more constrained");
-    }
+    ref.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(1.6)).attr("y2", y(1.6)).attr("stroke", "var(--line)").attr("stroke-dasharray", "3,3");
+    ref.append("text").attr("x", x(1.55)).attr("y", y(1.55) - 6).attr("text-anchor", "end").attr("font-size", 12).attr("fill", "var(--muted)").text("equal O/E");
+    if (!narrow) ref.append("text").attr("x", 6).attr("y", 14).attr("font-size", 12).attr("fill", "var(--muted)")
+      .text(mode === "gene" ? "below the line = interface more constrained than the gene as a whole" : "below the line = interface more constrained than the rest of the protein");
   }
   function style(s) { s.select(".domain").attr("stroke", "var(--line)"); s.selectAll("line").attr("stroke", "var(--line)"); s.selectAll("text").attr("fill", "var(--muted)").attr("font-size", 12); }
 
@@ -97,12 +83,12 @@ export function renderOverview(container, allRows, { onSelect, filters = DEFAULT
       const px = x(cx), py = y(cy);
       pts.push({ r, px, py });
     }
-    // Disease highlight: non-matching proteins become faint context underneath.
-    const hl = disease !== "all";
-    const on = hl ? pts.filter((p) => matchDisease(p.r, disease)) : pts;
+    // Highlight: non-matching proteins become faint context underneath.
+    const hl = activePills(cur).length > 0;
+    const on = hl ? pts.filter((p) => matchPills(p.r, cur)) : pts;
     if (hl) {
       ctx.fillStyle = "#c9cdd2"; ctx.globalAlpha = 0.28;
-      for (const p of pts) { if (matchDisease(p.r, disease)) continue; ctx.beginPath(); ctx.arc(p.px, p.py, 2, 0, 2 * Math.PI); ctx.fill(); }
+      for (const p of pts) { if (matchPills(p.r, cur)) continue; ctx.beginPath(); ctx.arc(p.px, p.py, 2, 0, 2 * Math.PI); ctx.fill(); }
     }
     // non-significant first (underneath), then significant
     for (const pass of [false, true]) {
@@ -117,9 +103,7 @@ export function renderOverview(container, allRows, { onSelect, filters = DEFAULT
     ctx.restore();
     qt = d3.quadtree().x((p) => p.px).y((p) => p.py).addAll(on);
     const nMissing = mode === "gene" ? rows.filter((r) => r.gm == null).length : 0;
-    const nHl = disease !== "all" ? on.length : null;
-    count.html(`<b>${int(rows.length - nMissing)}</b> proteins shown${nMissing ? ` (${int(nMissing)} without a gnomAD gene-level missense O/E)` : ""}` +
-      (nHl != null ? ` · <b>${int(nHl)}</b> highlighted: ${DISEASE_LABEL[disease]} (outlined)` : "") + ` · <span style="color:${COL.sig}">●</span> interface significantly depleted (p < 0.05) · <span style="color:${COL.ns}">●</span> not significant`);
+    count.html((nMissing ? `${int(nMissing)} proteins without a gnomAD gene-level missense O/E not shown · ` : "") + ` <span style="color:${COL.sig}">●</span> interface significantly depleted (p < 0.05) · <span style="color:${COL.ns}">●</span> not significant`);
   }
   function drawHighlight() {
     hiG.selectAll("*").remove();
@@ -149,10 +133,10 @@ export function renderOverview(container, allRows, { onSelect, filters = DEFAULT
     .on("click", () => { if (hovered && onSelect) onSelect(hovered.r); });
 
   function update(newRows, newFilters) {
-    rows = newRows; if (newFilters && newFilters.mode) mode = newFilters.mode; if (newFilters && newFilters.disease) disease = newFilters.disease;
+    rows = newRows; if (newFilters) { cur = newFilters; if (newFilters.mode) mode = newFilters.mode; }
     setScales(); draw(); drawHighlight();
   }
-  update(filterRows(allRows, filters), filters);
+  update(allRows, filters);
   return { update, setMode: (m) => { mode = m; setScales(); draw(); drawHighlight(); } };
 }
 

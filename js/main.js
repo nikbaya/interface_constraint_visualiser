@@ -3,7 +3,7 @@
 import { oeColor, oeGradient, setRamp, getRamp, fmt2, int, pretty_p, pretty_q, escapeHTML, bondList, TYPE_LABEL } from "./format.js";
 import { fetchJSON, loadProtein, indexMaps, prefetchProtein } from "./data.js";
 import { initSearch, lookup } from "./search.js";
-import { renderOverview, renderMini, filterRows, matchDisease, DEFAULT_FILTERS } from "./overview.js";
+import { renderOverview, renderMini, matchPills, activePills, PILLS, DEFAULT_FILTERS } from "./overview.js";
 import { renderTable, renderGeneList } from "./table.js";
 import { renderHeadline } from "./headline.js";
 import { renderTrack, renderLaneToolbar } from "./residueTrack.js";
@@ -16,7 +16,7 @@ import * as S from "./state.js";
 
 const el = (id) => document.getElementById(id);
 let INDEX = null, ROWS = [], MAPS = null;
-let filters = { ...DEFAULT_FILTERS, view: localStorage.getItem("icv-view") || "table" };
+let filters = { ...DEFAULT_FILTERS, pills: [], view: localStorage.getItem("icv-view") || "table" };
 let overview = null, table = null;
 let page = { uni: null, prot: null, parts: [] };   // live renderers on the protein page
 let VARIANT_INDEX = null;
@@ -44,62 +44,49 @@ async function init() {
 // ---------------------------------------------------------------------------
 function renderLanding() {
   el("stat-line").innerHTML = `<b>${int(INDEX.n_proteins)}</b> proteins with PDB-derived interfaces · <b>${int(INDEX.n_sig)}</b> with significantly depleted interfaces (p &lt; 0.05) · <b>${int(INDEX.n_heterogeneity_tested)}</b> tested for partner heterogeneity · gnomAD v4.1 × G2P ${INDEX.g2p_date.slice(0, 4)}`;
-  const f = el("filters");
-  f.innerHTML = `
-    <label class="chip"><input type="checkbox" data-f="sig"> significant only</label>
-    <label class="chip">partners ≥ <select data-f="minPartners"><option>0</option><option>1</option><option>2</option><option>3</option><option>5</option><option>10</option></select></label>
-    <label class="chip"><input type="checkbox" data-f="het"> partner heterogeneity (q &lt; 0.1)</label>
-    <div class="ms" id="ms-disease">
-      <button type="button" class="chip ms-btn" aria-haspopup="true" aria-expanded="false" title="Highlight disease genes in the plot (others fade) and list only them below">disease genes: <span class="ms-val">all</span> <span class="ms-caret">▾</span></button>
-      <div class="ms-menu" role="menu" hidden>
-        <div class="ms-row"><label><input type="checkbox" value="clinvar"> ClinVar P/LP missense</label><button type="button" class="ms-only" data-only="clinvar">only</button></div>
-        <div class="ms-row"><label><input type="checkbox" value="omim"> OMIM disease gene</label><button type="button" class="ms-only" data-only="omim">only</button></div>
-        <div class="ms-foot"><span class="tag">matches any ticked category</span><button type="button" class="ms-clear">clear</button></div>
-      </div>
+  // Controls: "Highlight" pills (AND), a sentence saying what is highlighted, and two
+  // segmented switches (plot axes, list style). No dropdowns.
+  const count = (pill) => ROWS.reduce((n, r) => n + (pill.test(r) ? 1 : 0), 0);
+  el("filters").innerHTML = `
+    <div class="ctl-row"><span class="ctl-label">Highlight</span>
+      ${PILLS.map((p) => `<button type="button" class="pill-toggle" data-k="${p.key}" aria-pressed="false" title="${escapeHTML(p.help)}">${escapeHTML(p.label)} <span class="pt-n">${int(count(p))}</span></button>`).join("")}
     </div>
-    <label class="chip" title="Homomer = the protein also binds other copies of itself (e.g. dimers, tetramers) in a PDB structure">self-interaction <select data-f="selfint">
-      <option value="any">any</option><option value="homomer">forms homomers</option><option value="nohomomer">no homomer</option></select></label>
-    <span class="chip-sep"></span>
-    <label class="chip">plot <select data-f="mode"><option value="oe">interface vs non-interface O/E</option><option value="gene">interface vs whole-gene O/E</option><option value="volcano">volcano (effect vs p)</option></select></label>
-    <label class="chip">list <select data-f="view"><option value="table">table</option><option value="cards">cards</option><option value="list">paste a gene list</option></select></label>`;
-  f.querySelector('[data-f="view"]').value = filters.view;
-  initDiseaseMenu(f.querySelector("#ms-disease"));
-  f.querySelectorAll("[data-f]").forEach((c) => c.addEventListener("change", () => {
-    const k = c.dataset.f;
-    filters[k] = c.type === "checkbox" ? c.checked : (k === "minPartners" ? +c.value : c.value);
-    if (k === "view") localStorage.setItem("icv-view", filters.view);
+    <p id="pill-summary" class="pill-summary"></p>
+    <div class="ctl-row"><span class="ctl-label">Plot</span>
+      <div class="seg" role="radiogroup" data-f="mode">
+        <button type="button" data-v="oe">Interface vs rest of protein</button><button type="button" data-v="gene">Interface vs whole gene</button>
+      </div></div>`;
+  el("list-controls").innerHTML = `<div class="ctl-row"><span class="ctl-label">List</span>
+      <div class="seg" role="radiogroup" data-f="view">
+        <button type="button" data-v="table">Table</button><button type="button" data-v="cards">Cards</button><button type="button" data-v="list">Paste genes</button>
+      </div></div>`;
+  document.querySelectorAll(".pill-toggle").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.k, on = filters.pills.includes(k);
+    filters.pills = on ? filters.pills.filter((x) => x !== k) : [...filters.pills, k];
     applyFilters();
   }));
+  document.querySelectorAll(".seg").forEach((g) => g.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+    filters[g.dataset.f] = b.dataset.v;
+    if (g.dataset.f === "view") localStorage.setItem("icv-view", filters.view);
+    applyFilters();
+  })));
   overview = renderOverview(el("overview"), ROWS, { filters, onSelect: (r) => (location.hash = `#/${r.u}`) });
   applyFilters();
 }
 
-// Disease-gene multi-select: two tick boxes (ClinVar P/LP, OMIM) with "only" shortcuts.
-// none ticked -> no highlight; one -> that set; both -> either.
-function initDiseaseMenu(root) {
-  const btn = root.querySelector(".ms-btn"), menu = root.querySelector(".ms-menu");
-  const boxes = [...root.querySelectorAll('input[type="checkbox"]')];
-  const LABEL = { all: "all", clinvar: "ClinVar P/LP", omim: "OMIM", either: "ClinVar P/LP or OMIM" };
-  const sync = () => {
-    const on = boxes.filter((b) => b.checked).map((b) => b.value);
-    filters.disease = on.length === 2 ? "either" : on.length === 1 ? on[0] : "all";
-    root.querySelector(".ms-val").textContent = LABEL[filters.disease];
-    btn.classList.toggle("active", filters.disease !== "all");
-    applyFilters();
-  };
-  const open = (v) => { menu.hidden = !v; btn.setAttribute("aria-expanded", String(v)); };
-  btn.addEventListener("click", (e) => { e.stopPropagation(); open(menu.hidden); });
-  boxes.forEach((b) => b.addEventListener("change", sync));
-  root.querySelectorAll(".ms-only").forEach((o) => o.addEventListener("click", () => { boxes.forEach((b) => (b.checked = b.value === o.dataset.only)); sync(); }));
-  root.querySelector(".ms-clear").addEventListener("click", () => { boxes.forEach((b) => (b.checked = false)); sync(); });
-  document.addEventListener("click", (e) => { if (!root.contains(e.target)) open(false); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") open(false); });
-}
-
 function applyFilters() {
-  const plotted = filterRows(ROWS, filters);
-  overview.update(plotted, filters);
-  const rows = filters.disease === "all" ? plotted : plotted.filter((r) => matchDisease(r, filters.disease));
+  // reflect state in the controls
+  document.querySelectorAll(".pill-toggle").forEach((b) => { const on = filters.pills.includes(b.dataset.k); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
+  document.querySelectorAll(".seg").forEach((g) => g.querySelectorAll("button").forEach((b) => { const on = filters[g.dataset.f] === b.dataset.v; b.classList.toggle("on", on); b.setAttribute("aria-checked", String(on)); }));
+  const act = activePills(filters);
+  const rows = act.length ? ROWS.filter((r) => matchPills(r, filters)) : ROWS;
+  const names = act.map((p) => `<b>${escapeHTML(p.label)}</b>`);
+  el("pill-summary").innerHTML = act.length
+    ? `Highlighting <b>${int(rows.length)}</b> of ${int(ROWS.length)} proteins: ${names.length > 1 ? names.slice(0, -1).join(", ") + " <i>and</i> " + names[names.length - 1] : names[0]}. They're outlined in the plot and listed below. <a href="#" id="pill-clear">Clear</a>`
+    : `Click any of these to highlight those proteins in the plot and list them below (several together narrow the set).`;
+  el("pill-clear")?.addEventListener("click", (e) => { e.preventDefault(); filters.pills = []; applyFilters(); });
+  el("list-title").innerHTML = act.length ? `Highlighted proteins, ranked by interface depletion` : `All proteins, ranked by interface depletion`;
+  overview.update(ROWS, filters);
   const c = el("list");
   if (filters.view === "list") { renderGeneList(c, INDEX, MAPS); return; }
   if (filters.view === "cards") { renderCards(c, rows); return; }
@@ -331,7 +318,7 @@ function onResize() {
     page.parts.push(renderContextBar(p));
   } else if (!el("landing").hidden && overview) {
     overview = renderOverview(el("overview"), ROWS, { filters, onSelect: (r) => (location.hash = `#/${r.u}`) });
-    overview.update(filterRows(ROWS, filters), filters);
+    overview.update(ROWS, filters);
   }
 }
 
