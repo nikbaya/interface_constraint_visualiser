@@ -30,11 +30,18 @@ const SURFACE_OPACITY = 0.9;
 const AA1 = { ALA: "A", ARG: "R", ASN: "N", ASP: "D", CYS: "C", GLN: "Q", GLU: "E", GLY: "G", HIS: "H", ILE: "I", LEU: "L", LYS: "K", MET: "M", PHE: "F", PRO: "P", SER: "S", THR: "T", TRP: "W", TYR: "Y", VAL: "V", MSE: "M", SEP: "S", TPO: "T", PTR: "Y" };
 const cifCache = new Map();
 
+// The ModelServers write primed atom names unquoted (C5' in SAM, ATP, nucleotides…),
+// which is valid mmCIF, but 3Dmol's CIF tokenizer reads the ' as an opening quote,
+// shifts every later column and throws. atom_site values never contain spaces, so
+// double-quoting primed tokens on ATOM/HETATM rows is safe (3Dmol strips the quotes).
+const quotePrimes = (txt) => txt.replace(/^(?:ATOM|HETATM)\s.*$/gm,
+  (line) => line.replace(/(^|\s)([^\s"']+'[^\s"]*)(?=\s|$)/g, '$1"$2"'));
+
 async function fetchText(urls) {
   let lastErr;
   for (const u of urls) {
     if (cifCache.has(u)) return cifCache.get(u);
-    try { const r = await fetch(u); if (!r.ok) throw new Error(`HTTP ${r.status}`); const t = await r.text(); cifCache.set(u, t); return t; }
+    try { const r = await fetch(u); if (!r.ok) throw new Error(`HTTP ${r.status}`); const t = quotePrimes(await r.text()); cifCache.set(u, t); return t; }
     catch (e) { lastErr = e; }
   }
   throw lastErr || new Error("no source");
@@ -84,23 +91,21 @@ export function renderStructurePanel(container, prot) {
     $("s3-partner-wrap").style.display = mode === "complex" ? "none" : "";
     setStatus(`loading ${pdb}…`);
     viewer.removeAllModels(); viewer.removeAllSurfaces(); viewer.removeAllLabels(); viewer.removeAllShapes(); models = [];
+    const chains = mode === "complex" ? null : (mode === "partner" && pchain ? [chain, pchain] : [chain]);
+    const fail = (what, note, e) => {
+      setStatus(`could not ${what} ${pdb} (${e.message})`, true);
+      $("s3-note").innerHTML = `${note} <a href="https://www.rcsb.org/structure/${pdb}" target="_blank" rel="noopener">Open ${pdb} at RCSB</a>.`;
+    };
+    let txts;
     try {
-      if (mode === "complex") {
-        const txt = await fetchText(FULL_SOURCES.map((f) => f(pdb)));
-        if (my !== token) return;
-        models.push({ m: viewer.addModel(txt, "cif"), role: "complex" });
-      } else {
-        const chains = mode === "partner" && pchain ? [chain, pchain] : [chain];
-        const txts = await Promise.all(chains.map((c) => fetchText(SOURCES.map((f) => f(pdb, c)))));
-        if (my !== token) return;
-        txts.forEach((t, i) => models.push({ m: viewer.addModel(t, "cif"), role: i === 0 ? "self" : "partner", chain: chains[i] }));
-      }
-    } catch (e) {
-      if (my !== token) return;
-      setStatus(`could not fetch ${pdb} (${e.message})`, true);
-      $("s3-note").innerHTML = `Structure servers unreachable. <a href="https://www.rcsb.org/structure/${pdb}" target="_blank" rel="noopener">Open ${pdb} at RCSB</a>.`;
-      return;
-    }
+      txts = mode === "complex" ? [await fetchText(FULL_SOURCES.map((f) => f(pdb)))]
+        : await Promise.all(chains.map((c) => fetchText(SOURCES.map((f) => f(pdb, c)))));
+    } catch (e) { if (my === token) fail("fetch", "Structure servers unreachable.", e); return; }
+    if (my !== token) return;
+    try {
+      if (mode === "complex") models.push({ m: viewer.addModel(txts[0], "cif"), role: "complex" });
+      else txts.forEach((t, i) => models.push({ m: viewer.addModel(t, "cif"), role: i === 0 ? "self" : "partner", chain: chains[i] }));
+    } catch (e) { viewer.removeAllModels(); models = []; fail("display", "The 3D viewer could not read this structure file.", e); return; }
     calib = mode === "complex" ? prot.best_pdb.self_chains.map((c) => calibrate(models[0].m, pdb, c)).find(Boolean) : calibrate(models[0].m, pdb, chain);
     await style(my);
     if (my !== token) return;
