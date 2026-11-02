@@ -11,7 +11,9 @@ import { PLP, BLB } from "./clinvarPanel.js";
 import * as S from "./state.js";
 
 const LANE_PREFS_KEY = "icv-lanes";
-const DEFAULT_LANES = { partners: true, clinvar: true, domains: true, regions: true, ss: true, plddt: true, sites: true };
+const DEFAULT_LANES = { partners: true, clinvar: true, domains: true, regions: true, ss: true, plddt: true, sites: true, win: false, winSize: 21 };
+export const WIN_SIZES = [5, 11, 21, 31, 51, 101];
+const WIN_MAX = 2;   // sliding-window line: y axis is O/E 0–2 (clamped)
 const MAX_PARTNER_ROWS = 14;
 const SS_COLOR = { H: "#5b7fb5", E: "#d59a3b", C: "#c9ced4", "-": "transparent" };
 const PLDDT_COLOR = (v) => (v == null ? "#e4e4ea" : v >= 90 ? "#0053d6" : v >= 70 ? "#65cbf3" : v >= 50 ? "#ffdb13" : "#ff7d45");
@@ -44,6 +46,19 @@ export function renderTrack(container, prot) {
   const regionIvs = ["region", "motif"].flatMap((k) => F[k] || []);
   const sites = [...(F.site || []).map((x) => ({ pos: x[0], label: x[1], kind: "site" })), ...(F.ptm || []).map((x) => ({ pos: x[0], label: x[1], kind: "ptm" }))];
 
+  // Sliding-window missense O/E: Σobs / Σexp over a centred window of winSize residues
+  // (truncated at the termini; residues without an expected count are skipped).
+  const winSize = prefs.winSize || DEFAULT_LANES.winSize;
+  const cumO = new Float64Array(L + 1), cumE = new Float64Array(L + 1);
+  for (let i = 0; i < L; i++) {
+    const r = rows[i], ok = r.exp != null && r.exp > 0;
+    cumO[i + 1] = cumO[i] + (ok ? r.obs || 0 : 0); cumE[i + 1] = cumE[i] + (ok ? r.exp : 0);
+  }
+  const winOE = (p) => {
+    const h = Math.floor(winSize / 2), a = Math.max(1, p - h), b = Math.min(L, p + h), e = cumE[b] - cumE[a - 1];
+    return e > 0 ? (cumO[b] - cumO[a - 1]) / e : null;
+  };
+
   // ---- geometry ----------------------------------------------------------
   const W = Math.max(container.clientWidth || 920, 300);
   const M = { left: W < 600 ? 92 : 132, right: 16, top: 8, bottom: 28 };
@@ -54,7 +69,7 @@ export function renderTrack(container, prot) {
     const lanes = [];
     let y = M.top + NAV_H + 14;
     const add = (id, h, label, opts = {}) => { lanes.push({ id, y, h, label, ...opts }); y += h + GAP; };
-    add("heat", 34, "missense O/E");
+    add("heat", prefs.win ? 48 : 34, "missense O/E");
     add("iface", 9, "interface");
     if (prefs.partners && allPartners.length) {
       const list = partnersShown();
@@ -80,7 +95,8 @@ export function renderTrack(container, prot) {
   const wrap = d3.select(container).append("div").attr("class", "track-wrap").style("position", "relative");
   const canvas = wrap.append("canvas").style("position", "absolute").style("left", 0).style("top", 0).style("pointer-events", "none");
   const ctx = canvas.node().getContext("2d");
-  const svg = wrap.append("svg").attr("width", W).style("display", "block");
+  // positioned so it stacks above the absolutely-positioned canvas (window line, cursor, focus)
+  const svg = wrap.append("svg").attr("width", W).style("display", "block").style("position", "relative");
   const gNav = svg.append("g").attr("transform", `translate(${M.left},${M.top})`);
   const gLanes = svg.append("g").attr("transform", `translate(${M.left},0)`);
   const gLabels = svg.append("g");
@@ -155,6 +171,17 @@ export function renderTrack(container, prot) {
       for (let p = v0; p <= v1; p++) { const r = rows[p - 1]; ctx.fillStyle = oeColorHex(r.oe); ctx.fillRect(M.left + x(p) - bw / 2, l.y, Math.max(bw, 0.6), l.h); }
       if (bw >= 9) { ctx.fillStyle = "#1b1f23"; ctx.font = `${Math.min(12, bw * 0.8)}px -apple-system,Helvetica,Arial,sans-serif`; ctx.textAlign = "center";
         for (let p = v0; p <= v1; p++) { const r = rows[p - 1]; ctx.fillStyle = r.oe != null && r.oe < 0.6 ? "#fff" : "#1b1f23"; ctx.fillText(r.aa, M.left + x(p), l.y + l.h / 2 + 4); } }
+      // sliding-window O/E line over the strip (y: O/E 0 at the bottom, 2 at the top; dashed = 1)
+      if (prefs.win) {
+        const y = d3.scaleLinear().domain([0, WIN_MAX]).range([l.y + l.h - 2, l.y + 2]).clamp(true);
+        const g = gLanes.append("g").style("pointer-events", "none");
+        g.append("line").attr("x1", 0).attr("x2", innerW).attr("y1", y(1)).attr("y2", y(1)).attr("stroke", "#1b1f23").attr("stroke-dasharray", "3,3").attr("opacity", .45);
+        const line = d3.line().defined((p) => winOE(p) != null).x((p) => x(p)).y((p) => y(winOE(p)));
+        const pts = d3.range(v0, v1 + 1), d = line(pts);
+        g.append("path").attr("d", d).attr("fill", "none").attr("stroke", "#fff").attr("stroke-width", 3.5).attr("stroke-opacity", .85).attr("stroke-linejoin", "round");
+        g.append("path").attr("d", d).attr("fill", "none").attr("stroke", "#1b1f23").attr("stroke-width", 1.6).attr("stroke-linejoin", "round");
+        gLabels.append("text").attr("x", M.left - 8).attr("y", l.y + l.h - 4).attr("text-anchor", "end").attr("font-size", 10.5).attr("fill", "var(--muted)").text(`— ${winSize}-res window`);
+      }
     }
     // 2. interface ticks
     { const l = lane("iface"); const g = gLanes.append("g");
@@ -269,6 +296,7 @@ export function renderTrack(container, prot) {
     const cv = cvPos.filter((c) => c[0] === pos).map((c) => (c[1] === "P" ? "ClinVar P/LP" : "ClinVar B/LB"));
     showTip(`<b>${r.aa}${pos}</b>${r.is_interface ? ' <span style="color:var(--orange)">· G2P interface</span>' : ""}<br>` +
       `<span class="muted">missense O/E</span> <b>${r.oe == null ? "no data" : fmt3(r.oe)}</b> <span class="muted">(obs ${r.obs ?? 0} · exp ${fmt2(r.exp)})</span>` +
+      (prefs.win ? `<br><span class="muted">${winSize}-residue window O/E</span> <b>${fmt2(winOE(pos))}</b>` : "") +
       (parts.length ? `<br><span class="muted">contacts:</span> ${parts.map((p) => `<span class="swatch" style="background:${p.color}"></span>${escapeHTML(p.label)}`).join(", ")}` : "") +
       (dom.length ? `<br><span class="muted">${escapeHTML(dom.join(" · "))}</span>` : "") +
       (F.ss && F.ss[pos - 1] && F.ss[pos - 1] !== "-" ? `<br><span class="muted">DSSP ${({ H: "helix", E: "strand", C: "coil" })[F.ss[pos - 1]]}` + (F.plddt && F.plddt[pos - 1] != null ? ` · pLDDT ${F.plddt[pos - 1]}` : "") + (F.asa && F.asa[pos - 1] != null ? ` · ASA ${F.asa[pos - 1]} Å²` : "") + `</span>` : "") +
@@ -296,7 +324,14 @@ export function renderLaneToolbar(container, prot, onChange) {
     ["ss", "2° structure", F.ss ? 1 : 0], ["plddt", "pLDDT", F.plddt ? 1 : 0], ["sites", "sites / PTMs", (F.site || F.ptm) ? 1 : 0],
   ].filter((c) => c[2]);
   container.innerHTML = `<span class="tag">lanes:</span> ` + chips.map(([k, label]) => `<label class="chip"><input type="checkbox" data-k="${k}" ${prefs[k] ? "checked" : ""}> ${label}</label>`).join("") +
+    `<span class="chip-sep"></span><label class="chip" title="Overlay missense O/E pooled over a sliding window of residues (Σobs / Σexp, centred) on the O/E strip; dashed line = O/E 1, axis 0–${WIN_MAX}">` +
+    `<input type="checkbox" data-k="win" ${prefs.win ? "checked" : ""}> window O/E ` +
+    `<select id="win-size" aria-label="window size (residues)">${WIN_SIZES.map((n) => `<option value="${n}" ${n === prefs.winSize ? "selected" : ""}>${n} res</option>`).join("")}</select></label>` +
     ` <button class="chip-btn" id="track-reset" title="show whole protein">reset zoom</button>`;
   container.querySelectorAll("input").forEach((i) => i.addEventListener("change", () => { setLanePref(i.dataset.k, i.checked); onChange(); }));
+  container.querySelector("#win-size").addEventListener("change", (e) => {
+    setLanePref("winSize", +e.target.value); setLanePref("win", true);
+    container.querySelector('input[data-k="win"]').checked = true; onChange();
+  });
   container.querySelector("#track-reset").addEventListener("click", () => S.set({ range: null }));
 }
