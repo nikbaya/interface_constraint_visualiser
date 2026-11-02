@@ -59,9 +59,10 @@ export function renderHeadline(container, prot) {
     const sel = S.get().partner;
     const W = Math.max(container.clientWidth || 920, 300);
     const narrow = W < 600;
-    const M = { top: 22, right: narrow ? 64 : 236, bottom: 42, left: narrow ? 112 : 160 };
-    // Right-hand table columns (x offsets from the plot's right edge): O/E · CI · residues · p vs rest
+    // Right-hand table columns (x offsets from the plot's right edge): O/E · CI · residues · p vs rest.
+    // The p column gets room for its widest form, "p = 0.0054" at the pooled-row font size.
     const COL = { oe: 10, ci: 48, n: 160, p: 172 };
+    const M = { top: 22, right: narrow ? 64 : COL.p + 86, bottom: 42, left: narrow ? 112 : 160 };
     const rowH = (r) => (r.header ? 32 : r.sub ? 25 : 44);
     const totalH = d3.sum(rows, rowH);
     const H = M.top + totalH + M.bottom;
