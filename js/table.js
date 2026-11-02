@@ -36,7 +36,7 @@ export function renderTable(container, rows, { page = 50, sortKey = "p", sortDir
     const data = sorted().slice(0, shown);
     const head = COLS.map((c) => `<th class="${c.left ? "left" : ""} ${sk === c.key ? "sorted" : ""}" data-k="${c.key}" title="${escapeHTML(c.title || "")}">${c.label}${sk === c.key ? (sd < 0 ? " ▾" : " ▴") : ""}</th>`).join("");
     const body = data.map((r) => `<tr data-u="${r.u}" tabindex="0">
-      <td class="left"><b>${escapeHTML(r.s)}</b> <span class="tag">${r.u}</span>${r.hm ? ' <span class="pill pill-hm" title="forms homomers (binds copies of itself)">↻</span>' : ""}${r.om ? ' <span class="pill pill-omim" title="OMIM disease gene">OMIM</span>' : ""}</td>
+      <td class="left"><b>${escapeHTML(r.s)}</b> <span class="tag">${r.u}</span>${r.hm ? ' <span class="pill pill-hm" title="forms homomers (binds copies of itself)">=</span>' : ""}${r.om ? ' <span class="pill pill-omim" title="OMIM disease gene">OMIM</span>' : ""}</td>
       <td>${bar(r.oi, [r.il, r.ih])}</td><td>${bar(r.on)}</td><td>${bar(r.gm)}</td>
       <td class="${r.sig ? "sig" : ""}">${pretty_p(r.p)}</td>
       <td>${int(r.ni)} <span class="tag">(${Math.round((r.fi || 0) * 100)}%)</span></td>

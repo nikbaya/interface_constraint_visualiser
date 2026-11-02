@@ -53,7 +53,7 @@ export function decodeProtein(doc) {
     }
     p.color = partnerColor(p.type === "heteromeric" ? hi++ : i, p.type);
     p.contactSet = new Set(p.contacts_self || []);
-    p.label = p.type === "homomeric" ? `↻ ${p.gene_symbol || p.uniprot_id}` : (p.gene_symbol || p.uniprot_id);
+    p.label = p.type === "homomeric" ? `= ${p.gene_symbol || p.uniprot_id}` : (p.gene_symbol || p.uniprot_id);
   });
   doc.partnerByUni = new Map((doc.partners || []).map((p) => [p.uniprot_id, p]));
 

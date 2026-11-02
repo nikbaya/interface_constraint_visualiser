@@ -123,7 +123,7 @@ function cardHTML(p) {
   return `<a class="card" href="#/${p.u}" data-u="${p.u}">
     <div class="card-top"><span class="card-gene">${escapeHTML(p.s)}</span><span class="card-uni">${p.u}</span></div>
     ${miniForest(p)}
-    <div class="card-foot"><span class="sig-pill ${strong ? "sig-strong" : ""}">${pretty_p(p.p)}</span><span>${int(p.np)} partner${p.np === 1 ? "" : "s"}${p.hm ? " · ↻" : ""}</span></div></a>`;
+    <div class="card-foot"><span class="sig-pill ${strong ? "sig-strong" : ""}">${pretty_p(p.p)}</span><span>${int(p.np)} partner${p.np === 1 ? "" : "s"}${p.hm ? " · =" : ""}</span></div></a>`;
 }
 function miniForest(p) {
   const ends = [p.oi, p.ih, p.on, p.nh].filter((v) => v != null);

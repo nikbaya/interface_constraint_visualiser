@@ -39,7 +39,7 @@ export function renderNetwork(container, prot) {
     loop.append("path").attr("class", "arc").attr("d", loopPath).attr("fill", "none")
       .attr("stroke", oeColor(homomer.oe ? homomer.oe.oe : null)).attr("stroke-width", Math.max(3, eScale(homomer.contacts_self.length))).attr("stroke-linecap", "round");
     loop.append("text").attr("x", cx0).attr("y", cy0 - R0 * 2.75).attr("text-anchor", "middle").attr("font-size", 12.5).attr("font-weight", 600)
-      .attr("fill", "var(--purple)").attr("paint-order", "stroke").attr("stroke", "var(--bg)").attr("stroke-width", 3).text("↻ homomer");
+      .attr("fill", "var(--purple)").attr("paint-order", "stroke").attr("stroke", "var(--bg)").attr("stroke-width", 3).text("= homomer");
     loop.on("mouseenter", (evt) => { hoverPartner = homomer.uniprot_id; paint(); showTip(loopTip(), evt); })
       .on("mousemove", (evt) => showTip(loopTip(), evt))
       .on("mouseleave", () => { hoverPartner = null; paint(); hideTip(); })
@@ -47,7 +47,7 @@ export function renderNetwork(container, prot) {
   }
   function loopTip() {
     const p = homomer;
-    return `<b>${escapeHTML(prot.gene_symbol)} ↻ ${escapeHTML(prot.gene_symbol)}</b> <span class="muted">homomer (another copy of itself)</span><br>` +
+    return `<b>${escapeHTML(prot.gene_symbol)} = ${escapeHTML(prot.gene_symbol)}</b> <span class="muted">homomer (another copy of itself)</span><br>` +
       `<span class="muted">${p.contacts_self.length} contact residues</span><br>` +
       `<span class="swatch" style="background:${oeColor(p.oe ? p.oe.oe : null)}"></span><span class="muted">O/E at the homomeric interface</span> <b>${fmt2(p.oe ? p.oe.oe : null)}</b>` +
       `<br><span class="muted">click to select</span>`;
