@@ -24,6 +24,8 @@ export const PILLS = [
     help: "Also binds other copies of itself (dimers, tetramers…) in a PDB structure" },
   { key: "partners", label: "2+ partners", test: (r) => r.np >= 2,
     help: "Structures show it binding at least two different proteins" },
+  { key: "pcon", label: "Constrained partner interface", test: (r) => r.pp != null && r.pp >= 1.301,
+    help: "The interface with at least one specific partner (heteromeric or homomeric) is depleted of missense variation vs the rest of the protein (one-sided p < 0.05 for that partner, nominal; catches proteins whose pooled interface isn't significant)" },
   { key: "het", label: "Partner-specific constraint", test: (r) => r.hp != null && r.hp >= -Math.log10(PILL_PARAMS.hetP),
     help: "Interface constraint differs between its partners (partner-heterogeneity test, nominal p below the slider threshold; default 0.05)" },
 ];
@@ -132,6 +134,7 @@ export function renderOverview(container, allRows, { onSelect, filters = DEFAULT
       <span class="muted">whole-gene missense O/E</span> ${fmt2(r.gm)}${r.gm != null ? ` <span class="muted nowrap">(90% CI ${fmt2(r.gml)}–${fmt2(r.gmh)})</span>` : ""}<br>
       ${r.om || r.cv ? `<span class="muted">${[r.om ? "OMIM disease gene" : "", r.cv ? `${r.cv} ClinVar P/LP missense residue${r.cv === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ")}</span><br>` : ""}
       <span class="muted">${pretty_p(r.p)}</span> · ${r.np} partner${r.np === 1 ? "" : "s"}${r.hp != null && r.hp >= 1.301 ? ` · <span style='color:var(--purple)'>partner-specific constraint (${pretty_p(r.hp, { ns: false })})</span>` : ""}<br>
+      ${r.pp != null && r.pp >= 1.301 ? `<span class="muted">most constrained partner interface</span> ${escapeHTML(r.pg || "")} <span class="muted">(${pretty_p(r.pp, { ns: false })})</span><br>` : ""}
       <span class="muted">click to open</span>`, evt);
   }).on("mouseleave", () => { hovered = null; drawHighlight(); hideTip(); })
     .on("click", () => { if (hovered && onSelect) onSelect(hovered.r); });
