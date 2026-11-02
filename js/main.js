@@ -178,7 +178,7 @@ async function showProtein(uni, q) {
   ["landing", "methods", "error"].forEach((s) => (el(s).hidden = true)); el("protein").hidden = false;
   window.scrollTo({ top: 0 });
   el("protein-header").innerHTML = `<p class="sub">Loading ${uni}…</p>`;
-  ["headline", "track", "track-toolbar", "network", "partner-table", "structure3d"].forEach((id) => { const n = el(id); if (n) n.innerHTML = ""; });
+  ["constraint-takeaway", "headline", "track", "track-toolbar", "network", "partner-table", "structure3d"].forEach((id) => { const n = el(id); if (n) n.innerHTML = ""; });
   let prot;
   try { prot = await loadProtein(uni); } catch (e) { return showError(`Could not load ${uni}.json (${e.message}).`); }
   if (location.hash.indexOf(`#/${uni}`) !== 0) return;   // navigated away while loading
@@ -192,6 +192,7 @@ function renderProtein(uni, prot, q) {
   document.title = `${prot.gene_symbol} · Interface Constraint Visualiser`;
 
   renderHeader(prot);
+  renderTakeaway(prot);
   renderMini(el("mini-scatter"), ROWS, uni);
   page.parts.push(renderHeadline(el("headline"), prot));
   renderLaneToolbar(el("track-toolbar"), prot, () => { page.track.destroy(); page.track = renderTrack(el("track"), prot); });
@@ -208,38 +209,61 @@ function renderProtein(uni, prot, q) {
 
 function renderHeader(p) {
   const s = p.summary, gc = p.gene_constraint;
-  const more = s.oe_ratio != null && s.oe_ratio < 1;
-  const gcLine = gc ? `<div class="sub">Gene-level (gnomAD v4.1): ` +
-    (gc.lof_oe != null ? `LoF O/E ${oeVal(gc.lof_oe)} <span class="tag">(90% CI ${fmt2(gc.lof_ci[0])}–${fmt2(gc.lof_ci[1])}, LOEUF ${fmt2(gc.lof_ci[1])})</span>` : "") +
-    (gc.mis_oe != null ? ` · missense O/E ${oeVal(gc.mis_oe)} <span class="tag">(${fmt2(gc.mis_ci[0])}–${fmt2(gc.mis_ci[1])})</span>` : "") +
-    (gc.pli != null ? ` · pLI ${gc.pli}` : "") + `</div>` : "";
   const gnomadHref = p.gene_id ? `https://gnomad.broadinstitute.org/gene/${p.gene_id}?dataset=gnomad_r4` : "https://gnomad.broadinstitute.org/";
-  const aliases = (p.aliases || []).length ? `<span class="tag">also: ${p.aliases.map(escapeHTML).join(", ")}</span>` : "";
-  const het = p.heterogeneity;
+  const ext = (href, label) => `<a href="${href}" target="_blank" rel="noopener">${label}</a>`;
+
+  // Identity line: accession · length · partners · aliases (first few; all on hover)
+  const al = p.aliases || [];
+  const nHet = (p.partners || []).filter((x) => x.type === "heteromeric").length;
+  const homo = (p.partners || []).some((x) => x.type === "homomeric");
+  const pct = s.interface_fraction * 100, pctTxt = pct > 0 && pct < 1 ? "<1%" : `${Math.round(pct)}%`;
+  const meta = [
+    p.uniprot_id, `${int(p.length)} aa`,
+    `<span style="color:var(--orange)">${int(s.n_interface_residues)} interface residues</span> (${pctTxt}) with ${int(nHet)} partner${nHet === 1 ? "" : "s"}${homo ? " + homomer" : ""}`,
+    al.length ? `<span title="also known as ${escapeHTML(al.join(", "))}">also ${al.slice(0, 3).map(escapeHTML).join(", ")}${al.length > 3 ? ` +${al.length - 3}` : ""}</span>` : "",
+  ].filter(Boolean).join(" · ");
+
+  // Gene-level gnomAD constraint: one quiet line, LOEUF + pLI only. LoF O/E and the
+  // gene missense O/E (≈ the rest-of-protein value below) are kept as hover detail.
+  const gcTip = gc ? [gc.lof_oe != null ? `LoF O/E ${fmt2(gc.lof_oe)} (90% CI ${fmt2(gc.lof_ci[0])}–${fmt2(gc.lof_ci[1])}); LOEUF is the upper bound` : "",
+    gc.mis_oe != null ? `gene missense O/E ${fmt2(gc.mis_oe)} (90% CI ${fmt2(gc.mis_ci[0])}–${fmt2(gc.mis_ci[1])})` : ""].filter(Boolean).join("\n") : "";
+  const gcBits = gc ? [gc.lof_oe != null ? `LOEUF <b>${fmt2(gc.lof_ci[1])}</b>` : "", gc.pli != null ? `pLI <b>${fmt2(gc.pli)}</b>` : ""].filter(Boolean) : [];
+  const gcLine = gcBits.length ? `<div class="sub gene-level" title="${escapeHTML(gcTip)}">Whole-gene constraint (gnomAD v4.1): ${gcBits.join(" · ")}</div>` : "";
+
   el("protein-header").innerHTML = `
     <div class="header-grid"><div>
-    <h1>${escapeHTML(p.gene_symbol)} ${p.omim ? `<a class="pill pill-omim" href="https://omim.org/entry/${p.omim.mim}" target="_blank" rel="noopener" title="OMIM disease gene (molecular basis known)">OMIM disease gene</a>` : ""} ${aliases}</h1>
+    <h1>${escapeHTML(p.gene_symbol)} ${p.omim ? `<a class="pill pill-omim" href="https://omim.org/entry/${p.omim.mim}" target="_blank" rel="noopener" title="OMIM disease gene (molecular basis known)">OMIM disease gene</a>` : ""}</h1>
     ${p.protein_name ? `<div class="protein-name">${escapeHTML(p.protein_name)}</div>` : ""}
-    <div class="sub">${p.uniprot_id} · ${int(p.length)} aa · <span style="color:var(--orange)">${int(s.n_interface_residues)} G2P interface residues</span> (${Math.round(s.interface_fraction * 100)}%)` +
-      ` · ${(() => { const n = (p.partners || []).filter((x) => x.type === "heteromeric").length; return `${int(n)} partner${n === 1 ? "" : "s"}`; })()}${(p.partners || []).some((x) => x.type === "homomeric") ? " · homomer" : ""}</div>
+    <div class="sub">${meta}</div>
     ${gcLine}
-    <div class="ext-links">More: <a href="https://www.uniprot.org/uniprotkb/${p.uniprot_id}/entry" target="_blank" rel="noopener">UniProt</a>
-      <a href="${gnomadHref}" target="_blank" rel="noopener">gnomAD</a>
-      <a href="https://g2p.broadinstitute.org/" target="_blank" rel="noopener">G2P</a>
-      <a href="https://www.genecards.org/cgi-bin/carddisp.pl?gene=${encodeURIComponent(p.gene_symbol)}" target="_blank" rel="noopener">GeneCards</a>
-      <a href="https://www.ncbi.nlm.nih.gov/clinvar/?term=${encodeURIComponent(p.gene_symbol)}%5Bgene%5D" target="_blank" rel="noopener">ClinVar</a>
-      ${p.omim ? `<a href="https://omim.org/entry/${p.omim.mim}" target="_blank" rel="noopener">OMIM</a>` : ""}
-      <a href="https://www.rcsb.org/search?request=%7B%22query%22%3A%7B%22type%22%3A%22terminal%22%2C%22service%22%3A%22text%22%2C%22parameters%22%3A%7B%22attribute%22%3A%22rcsb_polymer_entity_container_identifiers.reference_sequence_identifiers.database_accession%22%2C%22operator%22%3A%22exact_match%22%2C%22value%22%3A%22${p.uniprot_id}%22%7D%7D%2C%22return_type%22%3A%22entry%22%7D" target="_blank" rel="noopener">PDB</a>
-      · <a href="#" id="dl-res">residues CSV</a> <a href="#" id="dl-par">partners CSV</a> <a href="#" id="dl-svg">forest SVG</a></div>
-    <p class="headline-stat">Interface missense O/E ${oeVal(s.interface.oe)} <span class="tag">(${fmt2(s.interface.ci_low)}–${fmt2(s.interface.ci_high)})</span>
-      vs non-interface ${oeVal(s.noninterface.oe)} <span class="tag">(${fmt2(s.noninterface.ci_low)}–${fmt2(s.noninterface.ci_high)})</span> —
-      ${s.is_sig && more ? `interface is <b>significantly more</b> constrained` : `<b>no significant</b> interface depletion`} <span class="tag">(${pretty_p(s.log10p, { ns: false })}, one-sided)</span>` +
-      (het ? `<br><span class="tag">Partner heterogeneity ${pretty_p(het.log10p)} · ${pretty_q(het.q)}${het.q != null && het.q < 0.1 ? ` — constraint differs between partners (most: ${escapeHTML((p.partnerByUni.get(het.min[0]) || {}).label || het.min[0])} O/E ${fmt2(het.min[1])}; least: ${escapeHTML((p.partnerByUni.get(het.max[0]) || {}).label || het.max[0])} O/E ${fmt2(het.max[1])})` : ""}</span>` : "") +
-    `</p><div id="focus-note"></div></div>
+    <div class="ext-links">
+      <span>${ext(`https://www.uniprot.org/uniprotkb/${p.uniprot_id}/entry`, "UniProt")} ${ext(gnomadHref, "gnomAD")} ${ext("https://g2p.broadinstitute.org/", "G2P")}
+      ${ext(`https://www.genecards.org/cgi-bin/carddisp.pl?gene=${encodeURIComponent(p.gene_symbol)}`, "GeneCards")}
+      ${ext(`https://www.ncbi.nlm.nih.gov/clinvar/?term=${encodeURIComponent(p.gene_symbol)}%5Bgene%5D`, "ClinVar")}
+      ${p.omim ? ext(`https://omim.org/entry/${p.omim.mim}`, "OMIM") : ""}
+      ${ext(`https://www.rcsb.org/search?request=%7B%22query%22%3A%7B%22type%22%3A%22terminal%22%2C%22service%22%3A%22text%22%2C%22parameters%22%3A%7B%22attribute%22%3A%22rcsb_polymer_entity_container_identifiers.reference_sequence_identifiers.database_accession%22%2C%22operator%22%3A%22exact_match%22%2C%22value%22%3A%22${p.uniprot_id}%22%7D%7D%2C%22return_type%22%3A%22entry%22%7D`, "PDB")}</span>
+      <span class="dl">Download <a href="#" id="dl-res">residues.csv</a> <a href="#" id="dl-par">partners.csv</a> <a href="#" id="dl-svg">forest.svg</a></span></div>
+    <div id="focus-note"></div></div>
     <figure class="mini-fig"><div id="mini-scatter" class="mini-scatter"></div><figcaption>among all ${int(ROWS.length)} proteins</figcaption></figure></div>`;
   el("dl-res").addEventListener("click", (e) => { e.preventDefault(); downloadResiduesCSV(p); });
   el("dl-par").addEventListener("click", (e) => { e.preventDefault(); downloadPartnersCSV(p); });
   el("dl-svg").addEventListener("click", (e) => { e.preventDefault(); const svg = el("headline").querySelector("svg"); if (svg) downloadSVG(svg, `${p.gene_symbol}_interface_forest.svg`); });
+}
+
+// One-sentence takeaway above the forest plot: interface vs rest (effect size + p),
+// then whether constraint differs between partners. The plot carries the numbers.
+function renderTakeaway(p) {
+  const s = p.summary, het = p.heterogeneity, g = escapeHTML(p.gene_symbol);
+  const sig = s.is_sig && s.oe_ratio != null && s.oe_ratio < 1;
+  const pTxt = `<span class="tag">(${pretty_p(s.log10p, { ns: false })}, one-sided)</span>`;
+  const main = sig
+    ? `${g}'s interface residues are <b>significantly more constrained</b> than the rest of the protein: their missense O/E is ${Math.round((1 - s.oe_ratio) * 100)}% lower ${pTxt}.`
+    : `<b>No significant</b> depletion of missense variation at ${g}'s interfaces ${pTxt}.`;
+  const pl = (u) => escapeHTML((p.partnerByUni.get(u) || {}).label || u);
+  const hetTxt = !het ? "" : het.q != null && het.q < 0.1
+    ? ` <span class="takeaway-het sig">Constraint differs between partners: strongest with ${pl(het.min[0])}, weakest with ${pl(het.max[0])} <span class="tag">(${pretty_q(het.q)})</span>.</span>`
+    : ` <span class="takeaway-het">No evidence that it differs between partners <span class="tag">(${pretty_q(het.q)})</span>.</span>`;
+  el("constraint-takeaway").innerHTML = main + hetTxt;
 }
 
 // Slim bar under the site header that appears once the protein header scrolls away,

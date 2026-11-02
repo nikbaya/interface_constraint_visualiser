@@ -133,9 +133,14 @@ textarea#gl-input { width: 100%; font: inherit; font-size: .9rem; padding: .6rem
 #protein-header h1 { font-size: 1.7rem; margin: 0 0 .15rem; letter-spacing: -.02em; display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
 #protein-header .protein-name { font-size: 1.02rem; opacity: .85; margin: 0 0 .25rem; }
 #protein-header .sub { color: var(--muted); font-size: .9rem; }
-#protein-header .ext-links { font-size: .86rem; color: var(--muted); margin-top: .5rem; }
-#protein-header .ext-links a { margin: 0 .15rem; }
-#protein-header .headline-stat { margin: .6rem 0 0; font-size: 1rem; }
+#protein-header .sub b { color: var(--fg); font-weight: 600; }
+#protein-header .gene-level { cursor: help; }
+#protein-header .ext-links { font-size: .84rem; color: var(--muted); margin-top: .6rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: .2rem 1rem; }
+#protein-header .ext-links a { margin-right: .55rem; }
+#protein-header .ext-links .dl a { margin: 0 0 0 .45rem; }
+/* One-sentence takeaway above the forest plot */
+.takeaway { font-size: 1.02rem; line-height: 1.5; margin: .35rem 0 .3rem; max-width: 80ch; }
+.takeaway-het.sig { color: var(--purple); }
 .variant-note { margin: .6rem 0 0; padding: .35rem .6rem; font-size: .92rem; border-left: 3px solid var(--red); background: color-mix(in srgb, var(--red) 7%, transparent); border-radius: 3px; }
 .panel-title { font-size: 1.05rem; margin: 1.9rem 0 .2rem; padding-top: 1rem; border-top: 1px solid var(--line); }
 .panel-note { color: var(--muted); font-size: .9rem; margin: .1rem 0 .7rem; max-width: 80ch; }
@@ -148,6 +153,8 @@ svg { display: block; max-width: 100%; }
 .legend .tick, .s3-legend .tick { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 .forest-row.sub text { cursor: pointer; }
 .forest-notes { margin-top: .3rem; }
+.forest-opts { display: flex; justify-content: flex-end; align-items: center; gap: .6rem; margin: 0 0 .2rem; font-size: .84rem; }
+.forest-opts .seg button { font-size: .82rem; padding: .18rem .6rem; }
 .het-badge { font-size: .9rem; color: var(--muted); }
 .het-badge.sig { color: var(--purple); font-weight: 600; }
 .track-wrap svg text { user-select: none; }
