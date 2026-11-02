@@ -14,15 +14,19 @@ export function renderHeadline(container, prot) {
   let unsub = null;
 
   function rowsForDraw() {
+    // Pooled interface and non-interface side by side; partner rows open underneath.
     const base = [
       { key: "interface", label: "All interfaces", color: "var(--interface)", d: s.interface, main: true, n: s.n_interface_residues },
-    ];
-    if (expanded) {
-      const sorted = partners.slice().sort((a, b) => (a.oe.oe - b.oe.oe) || (b.contacts_self.length - a.contacts_self.length));
-      for (const p of sorted) base.push({ key: p.uniprot_id, label: p.label, color: p.color, d: p.oe, partner: p, sub: true });
+      { key: "noninterface", label: "Non-interface", color: "var(--noninterface)", d: s.noninterface, main: true },
+    ].filter((r) => r.d && r.d.oe != null);
+    if (partners.length) {
+      base.push({ key: "partners", header: true });
+      if (expanded) {
+        const sorted = partners.slice().sort((a, b) => (a.oe.oe - b.oe.oe) || (b.contacts_self.length - a.contacts_self.length));
+        for (const p of sorted) base.push({ key: p.uniprot_id, label: p.label, color: p.color, d: p.oe, partner: p, sub: true });
+      }
     }
-    base.push({ key: "noninterface", label: "Non-interface", color: "var(--noninterface)", d: s.noninterface, main: true });
-    return base.filter((r) => r.d && r.d.oe != null);
+    return base;
   }
 
   function draw() {
@@ -33,11 +37,11 @@ export function renderHeadline(container, prot) {
     const W = Math.max(container.clientWidth || 920, 300);
     const narrow = W < 600;
     const M = { top: 20, right: narrow ? 64 : 170, bottom: 42, left: narrow ? 112 : 160 };
-    const rowH = (r) => (r.sub ? 25 : 44);
+    const rowH = (r) => (r.header ? 32 : r.sub ? 25 : 44);
     const totalH = d3.sum(rows, rowH);
     const H = M.top + totalH + M.bottom;
     const innerW = W - M.left - M.right;
-    const maxX = Math.max(1.25, d3.min([2.5, d3.max(rows, (r) => r.d.ci_high ?? r.d.oe) * 1.05]));
+    const maxX = Math.max(1.25, d3.min([2.5, d3.max(rows.filter((r) => r.d), (r) => Math.max(r.d.ci_high ?? r.d.oe, r.d.rest?.ci_high ?? 0)) * 1.05]));
     const x = d3.scaleLinear().domain([0, maxX]).range([0, innerW]);
 
     const svg = d3.select(container).append("svg").attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`).attr("class", "forest");
@@ -52,11 +56,26 @@ export function renderHeadline(container, prot) {
     let yCur = 0;
     rows.forEach((r) => {
       const h = rowH(r), cy = yCur + h / 2; yCur += h;
+      if (r.header) {   // "By partner" toggle: opens the partner-resolved rows below the pooled pair
+        const hdr = g.append("g").attr("class", "forest-row").style("cursor", "pointer").on("click", () => { expanded = !expanded; draw(); });
+        hdr.append("rect").attr("x", -M.left + 4).attr("y", cy - h / 2).attr("width", W - 8).attr("height", h).attr("fill", "transparent");
+        hdr.append("line").attr("x1", -M.left + 8).attr("x2", innerW + M.right - 8).attr("y1", cy - h / 2 + 2).attr("y2", cy - h / 2 + 2).attr("stroke", "var(--line)");
+        hdr.append("text").attr("x", -12).attr("y", cy + 6).attr("text-anchor", "end").attr("font-size", 13.5).attr("font-weight", 600).attr("fill", "var(--broad-blue)")
+          .text(`${expanded ? "▾" : "▸"} By partner (${partners.length})`);
+        hdr.append("text").attr("x", innerW + 10).attr("y", cy + 6).attr("font-size", 12).attr("fill", "var(--muted)")
+          .text(narrow ? "" : expanded ? "click to collapse" : "click to show each partner");
+        return;
+      }
       const zero = r.d.oe === 0;
       const isSel = r.partner && r.partner.uniprot_id === sel;
       const row = g.append("g").attr("class", "forest-row" + (r.sub ? " sub" : "") + (isSel ? " selected" : ""))
-        .style("cursor", r.partner ? "pointer" : (r.main && r.key === "interface" && partners.length ? "pointer" : "default"));
+        .style("cursor", r.partner ? "pointer" : "default");
       if (r.sub) row.append("rect").attr("x", -M.left + 4).attr("y", cy - h / 2).attr("width", W - 8).attr("height", h).attr("fill", isSel ? "var(--sel-bg)" : "transparent").attr("rx", 4);
+      const rest = r.sub && r.d.rest;
+      if (rest && rest.ci_low != null)   // rest-of-protein 95% CI: grey band behind the partner row
+        row.append("rect").attr("x", x(Math.min(rest.ci_low, maxX))).attr("y", cy - 6)
+          .attr("width", Math.max(1, x(Math.min(rest.ci_high, maxX)) - x(Math.min(rest.ci_low, maxX)))).attr("height", 12)
+          .attr("fill", "var(--muted)").attr("opacity", .16).attr("rx", 2);
       if (r.sub && r.d.oe_rest != null)   // rest-of-protein reference tick for partner rows
         row.append("line").attr("x1", x(r.d.oe_rest)).attr("x2", x(r.d.oe_rest)).attr("y1", cy - 7).attr("y2", cy + 7).attr("stroke", "var(--muted)").attr("stroke-width", 1).attr("opacity", .5);
       if (r.d.ci_low != null) {
@@ -67,12 +86,8 @@ export function renderHeadline(container, prot) {
       }
       row.append("circle").attr("cx", x(Math.min(r.d.oe, maxX))).attr("cy", cy).attr("r", r.sub ? 4 : 6.5).attr("fill", r.color).attr("stroke", "var(--bg)").attr("stroke-width", 1.5);
       // Left label
-      const lab = row.append("text").attr("x", r.sub ? -16 : -12).attr("y", cy + 4).attr("text-anchor", "end").attr("font-size", r.sub ? 12.5 : 14)
-        .attr("fill", "var(--fg)").attr("font-weight", r.sub ? (isSel ? 700 : 500) : 600).text(r.label);
-      if (r.sub) row.append("circle").attr("cx", -8).attr("cy", cy).attr("r", 3.5).attr("fill", r.color);
-      if (r.key === "interface" && partners.length) {
-        lab.text(`${expanded ? "▾" : "▸"} All interfaces`).attr("fill", "var(--broad-blue)");
-      }
+      row.append("text").attr("x", -12).attr("y", cy + 4).attr("text-anchor", "end").attr("font-size", r.sub ? 12.5 : 14)
+        .attr("fill", "var(--fg)").attr("font-weight", r.sub ? (isSel ? 700 : 500) : 600).text(r.sub && narrow && r.label.length > 11 ? r.label.slice(0, 10) + "…" : r.label);
       // Right label: value + n + p
       const right = narrow ? `${fmt2(r.d.oe)}${zero ? " *" : ""}` : r.sub
         ? `${fmt2(r.d.oe)}${zero ? " *" : ""}  ·  ${r.d.n} res  ·  ${pretty_p(r.d.log10p)}`
@@ -82,7 +97,6 @@ export function renderHeadline(container, prot) {
       row.on("mousemove", (evt) => showTip(tipHTML(r, zero), evt)).on("mouseleave", hideTip)
         .on("click", () => {
           if (r.partner) S.set({ partner: isSel ? null : r.partner.uniprot_id });
-          else if (r.key === "interface" && partners.length) { expanded = !expanded; draw(); }
         });
     });
 
@@ -95,8 +109,8 @@ export function renderHeadline(container, prot) {
     } else if (expanded && partners.length >= 2) {
       notes.push(`<span class="tag">Partner heterogeneity not testable (needs ≥ 2 partners with ≥ 2 expected missense on partner-exclusive residues).</span>`);
     }
-    if (expanded && partners.length) notes.push(`<span class="tag">Each partner row: this protein's residues contacting that partner; tick = O/E of the rest of the protein; p = one-sided test vs the rest. Click a row to select the partner.</span>`);
-    if (rows.some((r) => r.d.oe === 0)) notes.push(`<span class="tag">* O/E = 0 (no observed missense) — the interval is unreliable at the boundary.</span>`);
+    if (expanded && partners.length) notes.push(`<span class="tag">Each partner row: this protein's residues contacting that partner; tick and grey band = O/E (95% CI) of the rest of the protein (everything except that partner's contacts); p = one-sided test vs the rest. Click a row to select the partner.</span>`);
+    if (rows.some((r) => r.d && r.d.oe === 0)) notes.push(`<span class="tag">* O/E = 0 (no observed missense) — the interval is unreliable at the boundary.</span>`);
     if (notes.length) container.insertAdjacentHTML("beforeend", `<p class="panel-note forest-notes">${notes.join("<br>")}</p>`);
   }
 
@@ -108,7 +122,9 @@ export function renderHeadline(container, prot) {
     if (r.partner) {
       const p = r.partner;
       h += `<br><span class="muted">${p.contacts_self.length} contact residues · ${bondList(p.bond_types)} · ${p.n_pdbs} PDB entries</span>`;
-      h += `<br><span class="muted">vs rest of protein (O/E ${fmt2(r.d.oe_rest)}):</span> ${pretty_p(r.d.log10p, { ns: false })}`;
+      const rest = r.d.rest;
+      h += `<br><span class="muted">rest of protein:</span> O/E ${fmt2(r.d.oe_rest)}${rest ? ` <span class="muted">(95% CI ${fmt2(rest.ci_low)}–${fmt2(rest.ci_high)}; obs ${rest.obs} / exp ${fmt2(rest.exp)})</span>` : ""}`;
+      h += `<br><span class="muted">vs rest of protein:</span> ${pretty_p(r.d.log10p, { ns: false })}`;
       if (p.oe_exclusive && p.oe_exclusive.oe != null) h += `<br><span class="muted">partner-exclusive residues only:</span> O/E ${fmt2(p.oe_exclusive.oe)} (${p.oe_exclusive.n} res)`;
       if (p.partner_side && p.partner_side.oe != null) h += `<br><span class="muted">${escapeHTML(p.label)}'s side of this interface:</span> O/E ${fmt2(p.partner_side.oe)}`;
       h += `<br><span class="muted">click to ${S.get().partner === p.uniprot_id ? "deselect" : "select"}</span>`;

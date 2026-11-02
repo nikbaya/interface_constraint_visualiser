@@ -58,7 +58,46 @@ export function pretty_q(q) {
   return q < 0.001 ? `q < 0.001` : `q = ${q.toPrecision(2)}`;
 }
 
-export const escapeHTML = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+// 95% CI for O/E = obs/exp, matching the precomputed intervals (gnomAD-style Poisson
+// likelihood over O/E: Gamma(obs + 1) quantiles / exp).
+export function oeCI(obs, exp, level = 0.95) {
+  if (obs == null || !(exp > 0)) return [null, null];
+  const a = obs + 1, t = (1 - level) / 2;
+  return [gammaQuantile(t, a) / exp, gammaQuantile(1 - t, a) / exp];
+}
+function gammaQuantile(p, a) {   // bisection on the regularized lower incomplete gamma
+  let lo = 0, hi = a + 20 * Math.sqrt(a) + 20;
+  for (let i = 0; i < 100; i++) { const m = (lo + hi) / 2; if (gammaP(a, m) < p) lo = m; else hi = m; }
+  return (lo + hi) / 2;
+}
+function gammaP(a, x) {
+  if (x <= 0) return 0;
+  const lnPre = -x + a * Math.log(x) - lnGamma(a);
+  if (x < a + 1) {   // series
+    let s = 1 / a, t = s;
+    for (let n = a + 1; n < a + 1e4; n++) { t *= x / n; s += t; if (t < s * 1e-14) break; }
+    return s * Math.exp(lnPre);
+  }
+  let b = x + 1 - a, c = 1e300, d = 1 / b, h = d;   // continued fraction (Lentz)
+  for (let i = 1; i < 1e4; i++) {
+    const an = -i * (i - a); b += 2;
+    d = an * d + b; d = Math.abs(d) < 1e-300 ? 1e300 : 1 / d;
+    c = b + an / c; if (Math.abs(c) < 1e-300) c = 1e-300;
+    const del = d * c; h *= del; if (Math.abs(del - 1) < 1e-14) break;
+  }
+  return 1 - Math.exp(lnPre) * h;
+}
+function lnGamma(z) {   // Lanczos
+  const g = 7, C = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313,
+    -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - lnGamma(1 - z);
+  z -= 1; let x = C[0];
+  for (let i = 1; i < g + 2; i++) x += C[i] / (z + i);
+  const t = z + g + 0.5;
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+}
+
+export const escapeHTML =(s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 export const BOND_LABEL = { hbond: "H-bond", nonbonded: "non-bonded", salt_bridge: "salt bridge", disulfide: "disulfide" };
