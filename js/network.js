@@ -3,7 +3,7 @@
 // = that partner's O/E at its interface with this protein (partner-resolved),
 // edge width = number of contact residues. Hover = preview on the track; click
 // = select the partner (headline / track / 3D follow); double-click = open it.
-import { oeColor, fmt2, escapeHTML, TYPE_LABEL } from "./format.js";
+import { oeColor, fmt2, escapeHTML, TYPE_LABEL, EXOGENOUS } from "./format.js";
 import { showTip, hideTip } from "./tooltip.js";
 import * as S from "./state.js";
 
@@ -52,12 +52,15 @@ export function renderNetwork(container, prot) {
       `<span class="swatch" style="background:${oeColor(p.oe ? p.oe.oe : null)}"></span><span class="muted">O/E at the homomeric interface</span> <b>${fmt2(p.oe ? p.oe.oe : null)}</b>` +
       `<br><span class="muted">click to select</span>`;
   }
-  const link = svg.append("g").selectAll("line").data(links).join("line").attr("stroke", "var(--line-strong)").attr("stroke-width", (d) => eScale(d.n || 1)).attr("stroke-opacity", .7);
+  const exo = (d) => !!(d.p && EXOGENOUS.has(d.p.type));  // non-human / antibody: dotted, not counted as partners
+  const link = svg.append("g").selectAll("line").data(links).join("line").attr("stroke", "var(--line-strong)").attr("stroke-width", (d) => eScale(d.n || 1)).attr("stroke-opacity", .7)
+    .attr("stroke-dasharray", (d) => (exo(nodes.find((x) => x.id === d.target)) ? "4,3" : null));
   const node = svg.append("g").selectAll("g").data(nodes.filter((d) => !d.ghost)).join("g").style("cursor", (d) => (d.self ? "default" : "pointer"));
   node.append("circle").attr("class", "halo").attr("r", (d) => radius(d) + 5).attr("fill", "none").attr("stroke", (d) => (d.p ? d.p.color : "none")).attr("stroke-width", 3).attr("opacity", 0);
   node.append("circle").attr("class", "body").attr("r", radius).attr("fill", (d) => oeColor(d.oe))
-    .attr("stroke", (d) => (d.self ? "var(--fg)" : d.p && d.p.has_page ? "var(--fg)" : "var(--bg)")).attr("stroke-width", (d) => (d.self ? 2.5 : d.p && d.p.has_page ? 1.8 : 1.2))
-    .attr("stroke-dasharray", (d) => (d.p && d.p.type === "unidentified" ? "3,2" : null));
+    .attr("stroke", (d) => (exo(d) ? "var(--muted)" : d.self ? "var(--fg)" : d.p && d.p.has_page ? "var(--fg)" : "var(--bg)"))
+    .attr("stroke-width", (d) => (d.self ? 2.5 : d.p && d.p.has_page ? 1.8 : 1.2))
+    .attr("stroke-dasharray", (d) => (d.p && d.p.type === "unidentified" ? "3,2" : exo(d) ? "1.5,2" : null));
   node.append("circle").attr("r", 4).attr("cx", (d) => radius(d) * 0.75).attr("cy", (d) => -radius(d) * 0.75).attr("fill", (d) => (d.p ? d.p.color : "none")).attr("stroke", "var(--bg)").attr("stroke-width", 1).style("display", (d) => (d.self ? "none" : null));
   node.append("text").text((d) => d.gene).attr("text-anchor", "middle").attr("dy", (d) => radius(d) + 14)
     .attr("font-size", (d) => (d.self ? 15 : 12.5)).attr("font-weight", (d) => (d.self ? 700 : 500)).attr("fill", "var(--fg)").style("pointer-events", "none");

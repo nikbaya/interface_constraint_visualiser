@@ -1,6 +1,6 @@
 // Data access: cached JSON fetches, hover-prefetch, and decoding of the compact
 // per-protein schema (v2) into the row objects the renderers use.
-import { partnerColor, oeCI } from "./format.js";
+import { partnerColor, oeCI, EXOGENOUS } from "./format.js";
 
 const cache = new Map();
 
@@ -51,7 +51,7 @@ export function decodeProtein(doc) {
       const obs = totObs - p.oe.obs, exp = totExp - p.oe.exp, [lo, up] = oeCI(obs, exp);
       p.oe.rest = { obs, exp, oe: p.oe.oe_rest ?? obs / exp, ci_low: lo, ci_high: up };
     }
-    p.color = partnerColor(p.type === "heteromeric" ? hi++ : i, p.type);
+    p.color = partnerColor(p.type === "heteromeric" || EXOGENOUS.has(p.type) ? hi++ : i, p.type);
     p.contactSet = new Set(p.contacts_self || []);
     p.label = p.type === "homomeric" ? `= ${p.gene_symbol || p.uniprot_id}` : (p.gene_symbol || p.uniprot_id);
   });

@@ -1,6 +1,6 @@
 // App entry: load the index, route by URL hash, render the landing page
 // (overview scatter + ranked table / cards + gene-list mode) and protein pages.
-import { oeColor, oeGradient, fmt2, int, pretty_p, pretty_q, escapeHTML, bondList, TYPE_LABEL } from "./format.js";
+import { oeColor, oeGradient, fmt2, int, pretty_p, pretty_q, escapeHTML, bondList, TYPE_LABEL, EXOGENOUS } from "./format.js";
 import { fetchJSON, loadProtein, indexMaps, prefetchProtein } from "./data.js";
 import { initSearch, lookup } from "./search.js";
 import { renderOverview, renderMini, matchPills, activePills, PILLS, PILL_PARAMS, HET_STEPS, DEFAULT_FILTERS } from "./overview.js";
@@ -216,10 +216,11 @@ function renderHeader(p) {
   const al = p.aliases || [];
   const nHet = (p.partners || []).filter((x) => x.type === "heteromeric").length;
   const homo = (p.partners || []).some((x) => x.type === "homomeric");
+  const nExo = (p.partners || []).filter((x) => EXOGENOUS.has(x.type)).length;
   const pct = s.interface_fraction * 100, pctTxt = pct > 0 && pct < 1 ? "<1%" : `${Math.round(pct)}%`;
   const meta = [
     p.uniprot_id, `${int(p.length)} aa`,
-    `<span style="color:var(--orange)">${int(s.n_interface_residues)} interface residues</span> (${pctTxt}) with ${int(nHet)} partner${nHet === 1 ? "" : "s"}${homo ? " + homomer" : ""}`,
+    `<span style="color:var(--orange)">${int(s.n_interface_residues)} interface residues</span> (${pctTxt}) with ${int(nHet)} partner${nHet === 1 ? "" : "s"}${homo ? " + homomer" : ""}${nExo ? ` <span class="muted" title="non-human proteins and antibodies / engineered binders: shown, but not counted as partners or tested for heterogeneity">(+ ${nExo} non-human / antibody)</span>` : ""}`,
     al.length ? `<span title="also known as ${escapeHTML(al.join(", "))}">also ${al.slice(0, 3).map(escapeHTML).join(", ")}${al.length > 3 ? ` +${al.length - 3}` : ""}</span>` : "",
   ].filter(Boolean).join(" · ");
 

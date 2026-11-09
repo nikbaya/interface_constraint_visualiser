@@ -102,4 +102,6 @@ export const escapeHTML =(s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
 
 export const BOND_LABEL = { hbond: "H-bond", nonbonded: "non-bonded", salt_bridge: "salt bridge", disulfide: "disulfide" };
 export const bondList = (arr) => (arr || []).map((b) => BOND_LABEL[b] || b).join(", ") || "–";
-export const TYPE_LABEL = { heteromeric: "heteromer", homomeric: "homomer (self)", processed_chain: "other processed chain", unidentified: "unidentified chain" };
+export const TYPE_LABEL = { heteromeric: "heteromer", homomeric: "homomer (self)", processed_chain: "other processed chain", non_human: "non-human protein", antibody: "antibody / binder", unidentified: "unidentified chain" };
+// Partners shown on the page but not counted as interaction partners (nor tested for heterogeneity)
+export const EXOGENOUS = new Set(["non_human", "antibody"]);
