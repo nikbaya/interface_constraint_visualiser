@@ -215,11 +215,17 @@ export function renderTrack(container, prot) {
     if (cl) {
       const g = gLanes.append("g"), base = cl.y + cl.h / 2, stem = cl.h / 2 - 5;
       g.append("line").attr("x1", 0).attr("x2", innerW).attr("y1", base).attr("y2", base).attr("stroke", "var(--line)");
-      for (const [pos, cat] of cvPos) {
+      // One lollipop per residue; distinct amino-acid substitutions at that residue are stacked
+      // as extra dots along the stem (up to CV_STACK), with a ×n label beyond that.
+      const CV_STACK = 3, CV_STEP = 6.5;
+      for (const [pos, cat, nAll = 1] of cvPos) {
         if (pos < v0 || pos > v1) continue;
         const dir = cat === "P" ? -1 : 1, col = cat === "P" ? PLP : BLB, iface = prot.interfaceSet.has(pos);
         g.append("line").attr("x1", x(pos)).attr("x2", x(pos)).attr("y1", base).attr("y2", base + dir * stem).attr("stroke", col).attr("opacity", .35);
-        g.append("circle").attr("cx", x(pos)).attr("cy", base + dir * stem).attr("r", 3.2).attr("fill", col).attr("stroke", iface ? "var(--orange)" : "var(--bg)").attr("stroke-width", iface ? 1.6 : .6);
+        for (let i = 0; i < Math.min(nAll, CV_STACK); i++)
+          g.append("circle").attr("cx", x(pos)).attr("cy", base + dir * (stem - i * CV_STEP)).attr("r", 3.2).attr("fill", col).attr("stroke", iface ? "var(--orange)" : "var(--bg)").attr("stroke-width", iface ? 1.6 : .6);
+        if (nAll > CV_STACK)
+          g.append("text").attr("x", x(pos) + 5).attr("y", base + dir * stem + 4).attr("font-size", 10).attr("fill", col).text(`×${nAll}`);
       }
     }
     // 5/6. domains + regions (packed intervals)
@@ -293,7 +299,7 @@ export function renderTrack(container, prot) {
     const r = rows[pos - 1];
     const parts = prot.partnersAt(pos);
     const dom = domainIvs.filter((iv) => pos >= iv[0] && pos <= iv[1]).map((iv) => iv[2]);
-    const cv = cvPos.filter((c) => c[0] === pos).map((c) => (c[1] === "P" ? "ClinVar P/LP" : "ClinVar B/LB"));
+    const cv = cvPos.filter((c) => c[0] === pos).map((c) => (c[1] === "P" ? "ClinVar P/LP" : "ClinVar B/LB") + (c[3] ? `: ${c[3].split(";").join(", ")}` : ""));
     showTip(`<b>${r.aa}${pos}</b>${r.is_interface ? ' <span style="color:var(--orange)">· G2P interface</span>' : ""}<br>` +
       `<span class="muted">missense O/E</span> <b>${r.oe == null ? "no data" : fmt3(r.oe)}</b> <span class="muted">(obs ${r.obs ?? 0} · exp ${fmt2(r.exp)})</span>` +
       (prefs.win ? `<br><span class="muted">${winSize}-residue window O/E</span> <b>${fmt2(winOE(pos))}</b>` : "") +
