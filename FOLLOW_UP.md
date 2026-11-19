@@ -37,20 +37,27 @@ residue track, headline and 3D view follow that selection, but the ClinVar secti
 
 **To do:**
 
-- [ ] With a partner selected, the P/LP missense count should be "N of M P/LP missense residues
+- [x] With a partner selected, the P/LP missense count should be "N of M P/LP missense residues
       contact <partner>". The set to use is that partner's `contacts_self`, not all G2P
-      interface residues.
-- [ ] Rerun the enrichment test for that partner. Use the one-sided binomial with the expected
+      interface residues. Done (2026-11-19) as a block under the ClinVar headline; counts are
+      allele-level ("N of M P/LP missense alleles").
+- [x] Rerun the enrichment test for that partner. Use the one-sided binomial with the expected
       fraction = that partner's contact residues / protein length. Label it with the partner
-      name. Show the protein-wide result as a secondary line so the change is visible.
+      name. Show the protein-wide result as a secondary line so the change is visible. Done; the
+      comparison line is the same allele-level test over all G2P interface residues. Also shows
+      Fisher's exact P/LP vs B/LB at the contacts vs the rest of the protein.
 - [ ] In the ClinVar lane and its tooltips, mark a variant as "interface" only if it is at a
       contact residue of the selected partner. Variants at other partners' interfaces could be
       shown dimmed or as "interface (other partner)" rather than dropped.
-- [ ] Clear the partner selection to go back to the current protein-wide view.
-- [ ] Decide whether to compute this in the browser from `clinvar.positions` and
+- [x] Clear the partner selection to go back to the current protein-wide view.
+- [x] Decide whether to compute this in the browser from `clinvar.positions` and
       `partners[].contacts_self`, or to export per-partner counts and p values from
       `export_web.py`. Per-partner export values would stay in sync with
       `partner_constraint_plp_test.py` in the analysis repo. Whichever route, the per-partner
-      numbers must match that script's per-partner counts.
+      numbers must match that script's per-partner counts. Done in the browser (`js/stats.js`).
+      Checked against `partner_constraint_plp.all_residues.tsv.gz`, 400 sampled protein × partner
+      rows: the partner's P/LP allele count and contact-residue count match in all 400; the
+      protein's P/LP total differs in 2 (O14746 43 vs 42; P41235 71 vs 10), because the
+      script only counts residues present in the G2P residue table.
 - [ ] Check which partners to allow: homomer, non-human and antibody partner types. At minimum,
       label them so a P/LP count against an antibody contact isn't read as a disease interface.

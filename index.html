@@ -77,14 +77,16 @@
     <div id="headline" class="panel"></div>
 
     <h2 class="panel-title" id="sec-residues">Residue browser</h2>
-    <p class="panel-note">Drag on the overview strip (or scroll on the lanes) to zoom. Each lane shares the same axis: missense O/E per residue, interface residues, contact footprints per partner, ClinVar variants, UniProt annotations, secondary structure and AlphaFold confidence. Click a residue to pin it.</p>
+    <p class="panel-note">Drag on the overview strip (or scroll on the lanes) to zoom. Each lane shares the same axis: amino-acid sequence, missense O/E per residue, interface residues, coding exons, contact footprints per partner, ClinVar variants, UniProt annotations, secondary structure and AlphaFold confidence. Click a residue to pin it. <b>Click or drag in the amino-acid, missense O/E or exon lanes</b> to select residues (in the exon lane, whole exons), or click a domain, region or motif to add it; shift-drag works on any lane: hovering then gives the pooled O/E (90% and 95% CI) and ClinVar P/LP vs B/LB for the selection, or for everything outside it.</p>
     <div id="track-toolbar" class="lane-toolbar"></div>
+    <div id="track-select" class="lane-toolbar sel-bar"></div>
     <div id="track" class="panel"></div>
     <div id="legend" class="legend"></div>
 
     <div id="clinvar-section" hidden>
       <h2 class="panel-title" id="sec-clinvar">ClinVar missense variants at the interface</h2>
       <p id="clinvar-headline" class="headline-stat"></p>
+      <div id="clinvar-partner" class="cv-partner"></div>
     </div>
 
     <h2 class="panel-title" id="sec-structure">Structure with partner</h2>
@@ -108,7 +110,9 @@
     <h3>Partner-resolved constraint</h3>
     <p>Each G2P contact names the partner chain in a PDB entry; the partner protein is identified first through G2P (the chain appears as the <em>own</em> chain in another protein's G2P file), then through SIFTS (EBI's PDB chain → UniProt mapping) for chains no G2P file claims. Non-human partners keep their own UniProt entry (labelled with species) and are not merged into the human protein. They, and antibodies or engineered binders (Ig light chains; Ig heavy chains, except Fc complexes of Fc receptors and other Ig-binding proteins; Adnectins, DARPins, nanobodies), are shown as <em>non-human protein</em> and <em>antibody / binder</em> rows but are not counted as partners, do not affect partner exclusivity and are not tested for heterogeneity. Only chains with no UniProt mapping in SIFTS — mostly antibodies, nanobodies and synthetic peptides — are pooled as <em>unidentified chain</em>. Interfaces seen in several entries are de-duplicated into binding modes (overlap coefficient ≥ 0.6, average linkage). For partner B, <em>this protein's interface with B</em> is the union of its residues contacting B in any entry; its O/E is compared with the rest of the protein by the same one-sided conditional binomial. <em>Partner heterogeneity</em> is a Poisson likelihood-ratio G-test of a common O/E across partners, on partner-exclusive residues only (so counts are independent), partners with expected ≥ 2, proteins with ≥ 2 such partners; q is Benjamini–Hochberg across tested proteins. Homomeric contacts (another copy of the same protein) are shown as a <em>homomer</em> row; contacts between two processed chains of one precursor are kept apart.</p>
     <h3>ClinVar</h3>
-    <p>ClinVar (2026-04, GRCh38) single amino-acid substitutions, mapped by gene symbol and HGVS protein change. Residue-level: a residue counts once per category (P/LP, VUS, B/LB). Enrichment at the interface is a one-sided binomial of the P/LP interface share against the protein's interface fraction.</p>
+    <p>ClinVar (2026-04, GRCh38) single amino-acid substitutions, mapped by gene symbol and HGVS protein change. Residue-level: a residue counts once per category (P/LP, VUS, B/LB). Enrichment at the interface is a one-sided binomial of the P/LP interface share against the protein's interface fraction. With one partner selected, the same test is run on that partner's contact residues at the <em>allele</em> level (distinct substitutions; expected share = contact residues / protein length), matching the analysis' per-partner counts, alongside Fisher's exact test (two-sided) of P/LP vs B/LB alleles at those contacts against the rest of the protein.</p>
+    <h3>Residue browser</h3>
+    <p><b>Coding exons</b>: GENCODE v39 CDS intervals of the exported transcript, in residue coordinates and numbered in transcript order (coding exons only); a codon split across two exons is drawn split. Not shown when the CDS length differs from 3 × protein length. <b>Selected residues</b>: pooled O/E over the selection (or over everything outside it) with 90% and 95% gamma (Poisson) intervals, as above; ClinVar P/LP vs B/LB is Fisher's exact test (two-sided) on alleles, selection vs the rest of the protein. Computed in the browser and not corrected for the selection having been chosen by eye.</p>
     <h3>Disease genes</h3>
     <p><b>OMIM disease gene</b>: the gene has at least one OMIM morbidmap phenotype with mapping key 3 (molecular basis known), excluding non-disease <code>[…]</code>, susceptibility <code>{…}</code> and provisional <code>?</code> entries (morbidmap 2026-02-13). Only this flag and a link to the OMIM entry are shown. <b>ClinVar P/LP</b>: at least one pathogenic / likely-pathogenic missense substitution in ClinVar (see above).</p>
     <h3>Structures</h3>

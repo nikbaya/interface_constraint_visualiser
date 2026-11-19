@@ -20,9 +20,12 @@ ClinVar variants, and the protein's structure with each partner.
   interface row into one row per structural partner, with a partner-heterogeneity
   test.
 - **Residue browser** — genome-browser-style lanes on a shared, zoomable axis:
-  per-residue O/E, G2P interface residues (orange), one lane
+  amino-acid sequence, per-residue O/E, G2P interface residues (orange), coding exons, one lane
   per partner, ClinVar lollipops, UniProt domains / regions / motifs, DSSP
-  secondary structure, AlphaFold pLDDT, sites and PTMs.
+  secondary structure, AlphaFold pLDDT, sites and PTMs. Click or drag in the
+  sequence / O/E / exon lanes, click a domain or region, or type ranges to
+  select residues; the tooltip then gives pooled O/E with 90% / 95%
+  CIs and ClinVar P/LP vs B/LB for the selection or for the rest of the protein.
 - **Structure with partner** — 3D view (3Dmol.js) of this protein coloured by
   per-residue O/E with the partner chain and contact residues; a *partner mosaic*
   mode paints every partner's footprint on one chain; a *whole complex* mode loads
@@ -42,7 +45,7 @@ index.html        # page shell (landing, protein page, methods)
 css/              # theme (Broad palette, light/dark) + layout
 js/               # main (routing) · state · data · search · overview · table ·
                   # headline · residueTrack · partnerStructure · network ·
-                  # clinvarPanel · export · structure3d (landing hero) · format · tooltip
+                  # clinvarPanel · stats · export · structure3d (landing hero) · format · tooltip
 data/             # index.json + variant_index.json + one <UNIPROT>.json per protein
 ```
 

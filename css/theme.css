@@ -7,6 +7,7 @@
   --fg: #1a1a1a; --muted: #63666A; --line: #e4e4ea; --line-strong: #c8cdd3;
   --bg: #ffffff; --bg-soft: #f6f8fa; --sel-bg: #eef4fb; --nodata: #cfd3d8;
   --domain: #dbe7f5; --domain-line: #9fb9d9; --region: #ecebf1;
+  --exon-a: #5f6b7a; --exon-a-text: #ffffff; --exon-b: #c9d0d9; --exon-b-text: #1a1a1a;
   --interface: #F36C3E; --noninterface: #9aa0a6;
   --oe-grad: linear-gradient(90deg,#b40426,#f7f7f7 50%,#3b4cc0);
   --tip-bg: #ffffff; --tip-fg: #1a1a1a; --tip-muted: #63666A; --tip-line: #dfe2e6;

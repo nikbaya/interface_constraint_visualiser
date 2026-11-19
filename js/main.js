@@ -6,7 +6,7 @@ import { initSearch, lookup } from "./search.js";
 import { renderOverview, renderMini, matchPills, activePills, PILLS, PILL_PARAMS, HET_STEPS, DEFAULT_FILTERS } from "./overview.js";
 import { renderTable, renderGeneList } from "./table.js";
 import { renderHeadline } from "./headline.js";
-import { renderTrack, renderLaneToolbar } from "./residueTrack.js";
+import { renderTrack, renderLaneToolbar, renderSelectBar } from "./residueTrack.js";
 import { renderNetwork } from "./network.js";
 import { renderClinvar } from "./clinvarPanel.js";
 import { renderStructurePanel } from "./partnerStructure.js";
@@ -178,7 +178,7 @@ async function showProtein(uni, q) {
   ["landing", "methods", "error"].forEach((s) => (el(s).hidden = true)); el("protein").hidden = false;
   window.scrollTo({ top: 0 });
   el("protein-header").innerHTML = `<p class="sub">Loading ${uni}…</p>`;
-  ["constraint-takeaway", "headline", "track", "track-toolbar", "network", "partner-table", "structure3d"].forEach((id) => { const n = el(id); if (n) n.innerHTML = ""; });
+  ["constraint-takeaway", "headline", "track", "track-toolbar", "track-select", "clinvar-partner", "network", "partner-table", "structure3d"].forEach((id) => { const n = el(id); if (n) n.innerHTML = ""; });
   let prot;
   try { prot = await loadProtein(uni); } catch (e) { return showError(`Could not load ${uni}.json (${e.message}).`); }
   if (location.hash.indexOf(`#/${uni}`) !== 0) return;   // navigated away while loading
@@ -197,8 +197,9 @@ function renderProtein(uni, prot, q) {
   page.parts.push(renderHeadline(el("headline"), prot));
   renderLaneToolbar(el("track-toolbar"), prot, () => { page.track.destroy(); page.track = renderTrack(el("track"), prot); });
   page.track = renderTrack(el("track"), prot); page.parts.push({ destroy: () => page.track.destroy() });
+  page.parts.push(renderSelectBar(el("track-select"), prot));
   renderLegend(el("legend"), prot);
-  renderClinvar(prot);
+  page.parts.push(renderClinvar(prot));
   page.parts.push(renderStructurePanel(el("structure3d"), prot));
   page.parts.push(renderNetwork(el("network"), prot));
   renderPartnerTable(prot);
@@ -346,6 +347,8 @@ function onResize() {
     page.parts = [];
     page.parts.push(renderHeadline(el("headline"), p));
     page.track = renderTrack(el("track"), p); page.parts.push({ destroy: () => page.track.destroy() });
+    page.parts.push(renderSelectBar(el("track-select"), p));
+    page.parts.push(renderClinvar(p));
     page.parts.push(renderStructurePanel(el("structure3d"), p));
     page.parts.push(renderNetwork(el("network"), p));
     page.parts.push({ destroy: S.subscribe((st, ch) => { if (ch.includes("partner")) paintPartnerTable(st.partner); if (ch.includes("focus")) focusNote(p, st.focus); }) });

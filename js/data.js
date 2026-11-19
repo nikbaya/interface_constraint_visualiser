@@ -82,6 +82,26 @@ export function decodeProtein(doc) {
   return doc;
 }
 
+// Coding exons in residue coordinates, from the GENCODE CDS intervals in variant_index.json
+// (the exported transcript). Exons are numbered in transcript order (coding exons only, so
+// UTR-only exons are not counted). Residue p spans [p - 0.5, p + 0.5]; CDS nucleotide offset o
+// (0-based) sits at 0.5 + o / 3, so a codon split across two exons is drawn split too.
+// Returns null when the protein has no transcript or its CDS length is not 3 × length.
+export async function loadExons(uni, length) {
+  const vi = await fetchJSON("data/variant_index.json");
+  const t = vi.transcripts.find((x) => x.uniprot_id === uni);
+  if (!t) return null;
+  const cds = t.strand === "-" ? t.cds.slice().reverse() : t.cds.slice();
+  const nt = cds.reduce((s, [a, b]) => s + b - a + 1, 0);
+  if (nt !== 3 * length) return { transcript: t.transcript, mismatch: true, nt };
+  let o = 0;
+  const exons = cds.map(([g0, g1], i) => {
+    const o0 = o; o += g1 - g0 + 1;
+    return { n: i + 1, x0: 0.5 + o0 / 3, x1: 0.5 + o / 3, r0: Math.floor(o0 / 3) + 1, r1: Math.floor((o - 1) / 3) + 1, g0, g1 };
+  });
+  return { transcript: t.transcript, chrom: t.chrom, strand: t.strand, assembly: vi.assembly, gencode: vi.gencode, exons };
+}
+
 // Index helpers -------------------------------------------------------------
 export function indexMaps(index) {
   const bySymbol = new Map(), byUni = new Map(), byAlias = new Map();

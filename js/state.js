@@ -9,8 +9,9 @@
 //   pdb     : PDB ID chosen in the 3D panel (null = partner's representative)
 //   mode3d  : 'partner' | 'mosaic' | 'complex'
 //   focus   : pinned residue (from variant / residue search)
+//   sel     : user-selected residues, sorted unique positions (null = none)
 
-const state = { partner: null, range: null, hover: null, pdb: null, mode3d: "partner", focus: null };
+const state = { partner: null, range: null, hover: null, pdb: null, mode3d: "partner", focus: null, sel: null };
 const subs = new Set();
 let uni = null;           // current protein (for URL building)
 let suppressURL = false;
@@ -31,7 +32,7 @@ export function set(patch, { url = true } = {}) {
 export function reset(newUni, fromURL = {}) {
   uni = newUni;
   suppressURL = true;
-  set({ partner: null, range: null, hover: null, pdb: null, mode3d: "partner", focus: null, ...fromURL }, { url: false });
+  set({ partner: null, range: null, hover: null, pdb: null, mode3d: "partner", focus: null, sel: null, ...fromURL }, { url: false });
   suppressURL = false;
 }
 
@@ -40,7 +41,7 @@ function same(a, b) {
   return a === b;
 }
 
-// URL: #/{uni}?partner=Q..&res=12-340&pdb=6QDV&mode=mosaic&hl=175
+// URL: #/{uni}?partner=Q..&res=12-340&pdb=6QDV&mode=mosaic&hl=175&sel=120-180,245
 export function buildHash() {
   if (!uni) return "#/";
   const q = new URLSearchParams();
@@ -49,7 +50,8 @@ export function buildHash() {
   if (state.pdb) q.set("pdb", state.pdb);
   if (state.mode3d && state.mode3d !== "partner") q.set("mode", state.mode3d);
   if (state.focus) q.set("hl", state.focus);
-  const qs = q.toString();
+  if (state.sel && state.sel.length) q.set("sel", encodeSel(state.sel));
+  const qs = q.toString().replace(/%2C/g, ",");
   return `#/${uni}${qs ? "?" + qs : ""}`;
 }
 
@@ -67,5 +69,23 @@ export function parseQuery(qs) {
   if (q.get("pdb")) out.pdb = q.get("pdb").toUpperCase();
   if (q.get("mode")) out.mode3d = q.get("mode");
   if (q.get("hl")) out.focus = parseInt(q.get("hl"), 10) || null;
+  if (q.get("sel")) out.sel = parseSel(q.get("sel"));
   return out;
+}
+
+// Residue sets as text: "120-180,245" <-> [120, ..., 180, 245]. Positions above maxPos are dropped.
+export function parseSel(text, maxPos = Infinity) {
+  const out = new Set();
+  for (const part of String(text || "").split(/[\s,;]+/)) {
+    const m = part.match(/^(\d+)(?:\s*[-–:]\s*(\d+))?$/);
+    if (!m) continue;
+    let a = +m[1], b = m[2] ? +m[2] : a; if (a > b) [a, b] = [b, a];
+    for (let p = Math.max(1, a); p <= Math.min(b, maxPos); p++) out.add(p);
+  }
+  return out.size ? [...out].sort((x, y) => x - y) : null;
+}
+export function encodeSel(sel) {
+  const runs = [];
+  for (const p of sel) { const r = runs[runs.length - 1]; if (r && p === r[1] + 1) r[1] = p; else runs.push([p, p]); }
+  return runs.map(([a, b]) => (a === b ? `${a}` : `${a}-${b}`)).join(",");
 }

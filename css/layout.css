@@ -227,3 +227,20 @@ footer { border-top: 1px solid var(--line); color: var(--muted); font-size: .85r
   .mini-fig { display: none; }
   #s3-viewer { height: 340px; }
 }
+
+/* Residue selection bar + tooltip block; per-partner ClinVar block */
+.sel-bar { margin-top: -.3rem; }
+.sel-input { font: inherit; font-size: .86rem; width: 15ch; padding: .15rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--fg); }
+.sel-input:focus { outline: 2px solid var(--light-broad-blue); border-color: var(--broad-blue); }
+.sel-bar .chip-btn .pdot { margin-right: .3rem; }
+.sel-bar { flex-wrap: nowrap; }
+.sel-bar > * { flex: none; }
+/* one line, so selecting never shifts the track below */
+.sel-summary { font-size: .86rem; flex: 1 1 auto !important; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tooltip .tip-sel { margin: 0 0 .35rem; padding: 0 0 .35rem; border-bottom: 1px solid var(--tip-line); }
+.cv-partner:empty { display: none; }
+.cv-partner { margin: .5rem 0 0; padding: .45rem .7rem; border-left: 3px solid var(--line-strong); background: var(--bg-soft); border-radius: 3px; }
+.cv-partner-title { font-size: .95rem; margin: 0 0 .25rem; font-weight: 600; }
+.cv-partner-title .pdot { margin-right: .35rem; }
+.cv-partner .headline-stat { margin: 0; }
+.tooltip .tip-hint { font-size: .78rem; font-style: italic; }
