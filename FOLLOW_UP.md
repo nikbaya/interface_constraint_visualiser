@@ -40,7 +40,7 @@ residue track, headline and 3D view follow that selection, but the ClinVar secti
 - [x] With a partner selected, the P/LP missense count should be "N of M P/LP missense residues
       contact <partner>". The set to use is that partner's `contacts_self`, not all G2P
       interface residues. Done (2026-11-19) as a block under the ClinVar headline; counts are
-      allele-level ("N of M P/LP missense alleles").
+      residue-level ("N of M P/LP missense residues"), as in the headline.
 - [x] Rerun the enrichment test for that partner. Use the one-sided binomial with the expected
       fraction = that partner's contact residues / protein length. Label it with the partner
       name. Show the protein-wide result as a secondary line so the change is visible. Done; the
@@ -61,3 +61,61 @@ residue track, headline and 3D view follow that selection, but the ClinVar secti
       script only counts residues present in the G2P residue table.
 - [ ] Check which partners to allow: homomer, non-human and antibody partner types. At minimum,
       label them so a P/LP count against an antibody contact isn't read as a disease interface.
+
+## ClinVar headline test: binomial -> one-sided Fisher's exact (2026-11-19)
+
+The residue-level P/LP interface enrichment was a one-sided binomial against the interface
+fraction. P/LP residues are a subset of the protein's residues (drawn without replacement), so
+the exact null is hypergeometric, i.e. one-sided Fisher's exact on interface x P/LP-or-not. The
+binomial is conservative; across 1,985 proteins, 159 -> 161 reach p < 0.05 (none lost), and
+dense cases move a lot (KCNQ2 2e-13 -> 1.5e-18).
+
+- [x] Site computes the headline p in the browser from counts already in the JSON
+      (`js/clinvarPanel.js`, `hypergeomSF` in `js/stats.js`), so it is right with the current data.
+- [x] `export_web.py` `clinvar_block` switched to `stats.hypergeom.sf` (analysis repo, uncommitted).
+- [ ] Re-export `data/`. Until then `clinvar.enrichment.log10p` in the protein JSON and `cvp` in
+      `index.json` are still binomial. The site reads neither, but anyone using the JSON would.
+- [x] Partner block now residue-level too (P/LP residues, not alleles), with the same one-sided
+      Fisher's exact test as the headline. Its counts no longer match `partner_constraint_plp_test.py`,
+      which counts alleles (TP53 x BCL2L1: 11 of 99 residues here vs 26 of 225 alleles there).
+- [ ] Partner block uses the residue-share baseline (`p_plp_res`); switching to the
+      expected-missense share (the script's main `p_plp`) is undecided.
+
+## REVISIT: residues with both P/LP and B/LB are left out of P/LP vs B/LB (2026-11-19)
+
+**Current behaviour.** The P/LP vs B/LB Fisher's exact test (partner block "Relative to benign"
+line, and the selection tooltip) counts residues, and **leaves out every residue that has both a
+P/LP and a B/LB missense substitution**. The page says how many were left out. Code:
+`regionStats` in `js/stats.js` (`Ponly` / `Bonly` / `mixed`); Methods text in `index.html`.
+
+**Why.** Fisher's exact test needs each unit in exactly one cell of the 2x2. A residue with both
+categories would sit in the P/LP row and the B/LB row at once (always in the same column), so the
+cells would not be disjoint and the hypergeometric null would not hold.
+
+**What is not affected.** The enrichment tests (headline, and partner block main line) are
+interface x (P/LP residue or not): every residue falls in exactly one cell, so mixed residues just
+count as P/LP residues there. Benign variants play no part in those tests.
+
+**Size of the issue** (current export, ClinVar 2026-04):
+- 234 residues in 143 proteins have both, i.e. 0.8% of 29,589 P/LP residues and 0.5% of 48,417
+  B/LB residues.
+- Almost all are different substitutions at one residue (e.g. a conservative change benign, a
+  drastic one pathogenic). Only one is the same substitution classified both ways: HBA1 K140E.
+- It can matter for single proteins: TP53 has 13 mixed residues, and the TP53 x BCL2L1 comparison
+  leaves out 13 of the 198 residues it would otherwise use.
+
+**Options to decide between:**
+1. Leave mixed residues out (current). Simple and valid, but drops information, and the dropped
+   residues are not random: they are residues where several substitutions have been studied.
+2. P/LP takes precedence (a mixed residue counts as P/LP). Keeps every P/LP residue, matching the
+   enrichment tests, but treats a residue's benign substitutions as uninformative.
+3. Count substitutions (alleles) instead of residues for this comparison. Each substitution has one
+   classification, so the 2x2 is a proper partition (only HBA1 K140E conflicts). But substitutions
+   at one residue are not independent, and hotspots carry many, so the effective sample size is
+   overstated. Residue-level counting was chosen on 2026-11-19 partly to avoid this.
+4. Keep mixed as a third class: a 2x3 Freeman-Halton exact test, or report it separately.
+5. Avoid the 2x2 altogether with a permutation test that shuffles the residue set within the
+   protein; then a residue may carry both labels.
+
+Whatever is chosen, the headline enrichment test and the analysis repo should use the same rule if
+a P/LP vs B/LB comparison is ever added there.

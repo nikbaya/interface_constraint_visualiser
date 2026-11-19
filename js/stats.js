@@ -1,18 +1,19 @@
 // Small exact tests and region summaries computed in the browser: pooled missense O/E
-// (with 90% / 95% CIs) and ClinVar counts for any residue set, the one-sided binomial
-// used for P/LP interface enrichment, and Fisher's exact test for P/LP vs B/LB.
+// (with 90% / 95% CIs) and ClinVar counts for any residue set, the one-sided Fisher's exact
+// (hypergeometric) test used for P/LP enrichment, and Fisher's exact test for P/LP vs B/LB.
+// ClinVar counts are residue-level throughout: a residue counts once per category.
 import { lnGamma, oeCI } from "./format.js";
 
 const lnChoose = (n, k) => lnGamma(n + 1) - lnGamma(k + 1) - lnGamma(n - k + 1);
 
-// P[X >= k], X ~ Binomial(n, p)  (scipy.stats.binom.sf(k - 1, n, p))
-export function binomSF(k, n, p) {
-  if (k <= 0) return 1;
-  if (k > n) return 0;
-  if (p <= 0) return 0;
-  if (p >= 1) return 1;
+// P[X >= k], X ~ Hypergeometric(N items, K of them marked, n drawn without replacement).
+// = one-sided (greater) Fisher's exact test on [[k, n - k], [K - k, N - K - n + k]].
+export function hypergeomSF(k, N, K, n) {
+  const lo = Math.max(0, n - (N - K)), hi = Math.min(K, n);
+  if (k <= lo) return 1;
+  if (k > hi) return 0;
   let s = 0;
-  for (let i = k; i <= n; i++) s += Math.exp(lnChoose(n, i) + i * Math.log(p) + (n - i) * Math.log1p(-p));
+  for (let x = k; x <= hi; x++) s += Math.exp(lnChoose(K, x) + lnChoose(N - K, n - x) - lnChoose(N, n));
   return Math.min(1, s);
 }
 
@@ -29,45 +30,51 @@ export function fisher2x2(a, b, c, d) {
   return { or, p: Math.min(1, p) };
 }
 
-// ClinVar allele counts per residue: Map pos -> { P: n, B: n } (missense, distinct substitutions).
-export function clinvarAlleles(prot) {
+// ClinVar categories per residue: Map pos -> { P: bool, B: bool } (missense; a residue can be both,
+// with different substitutions).
+export function clinvarResidues(prot) {
   const m = new Map();
-  for (const [pos, cat, n = 1] of (prot.clinvar && prot.clinvar.positions) || []) {
-    if (!m.has(pos)) m.set(pos, { P: 0, B: 0 });
-    m.get(pos)[cat === "P" ? "P" : "B"] += n;
+  for (const [pos, cat] of (prot.clinvar && prot.clinvar.positions) || []) {
+    if (!m.has(pos)) m.set(pos, { P: false, B: false });
+    m.get(pos)[cat === "P" ? "P" : "B"] = true;
   }
   return m;
 }
 
-// Pooled missense O/E and ClinVar P/LP / B/LB alleles for a residue set and its complement.
+// Pooled missense O/E and ClinVar P/LP / B/LB residue counts for a residue set and its complement.
 // `inSet(pos)` -> boolean. Residues without an expected count add nothing to obs / exp.
 export function regionStats(prot, inSet) {
-  const cv = prot._cvAlleles || (prot._cvAlleles = clinvarAlleles(prot));
-  const z = () => ({ n: 0, obs: 0, exp: 0, P: 0, B: 0, plpRes: 0 });
+  const cv = prot._cvRes || (prot._cvRes = clinvarResidues(prot));
+  // P / B: residues with any P/LP / any B/LB substitution (a residue with both counts in each).
+  // Ponly / Bonly / mixed: the same residues split so each falls in one class, for P/LP vs B/LB.
+  const z = () => ({ n: 0, obs: 0, exp: 0, P: 0, B: 0, Ponly: 0, Bonly: 0, mixed: 0 });
   const s = { in: z(), out: z() };
   for (const r of prot.residueRows) {
     const t = inSet(r.pos) ? s.in : s.out;
     t.n++;
     if (r.exp != null && r.exp > 0) { t.obs += r.obs || 0; t.exp += r.exp; }
     const c = cv.get(r.pos);
-    if (c) { t.P += c.P; t.B += c.B; if (c.P) t.plpRes++; }
+    if (c) { t.P += c.P ? 1 : 0; t.B += c.B ? 1 : 0; if (c.P && c.B) t.mixed++; else if (c.P) t.Ponly++; else t.Bonly++; }
   }
   for (const t of [s.in, s.out]) {
     t.oe = t.exp > 0 ? t.obs / t.exp : null;
     t.ci90 = oeCI(t.obs, t.exp, 0.90);
     t.ci95 = oeCI(t.obs, t.exp, 0.95);
   }
-  // P/LP relative to B/LB: [[P_in, B_in], [P_out, B_out]]
-  s.fisher = s.in.P + s.in.B + s.out.P + s.out.B > 0 ? fisher2x2(s.in.P, s.in.B, s.out.P, s.out.B) : null;
+  // P/LP relative to B/LB: [[P_in, B_in], [P_out, B_out]] over residues that are only P/LP or only
+  // B/LB. Fisher needs each residue in exactly one cell; a residue with both (different
+  // substitutions) would sit in both rows, so those are left out (s.mixed reports how many).
+  s.mixed = s.in.mixed + s.out.mixed;
+  s.fisher = s.in.Ponly + s.in.Bonly + s.out.Ponly + s.out.Bonly > 0 ? fisher2x2(s.in.Ponly, s.in.Bonly, s.out.Ponly, s.out.Bonly) : null;
   return s;
 }
 
-// One-sided binomial P/LP enrichment on alleles: k of n P/LP alleles fall in a set that
-// holds a fraction `frac` of the protein's residues.
-export function plpEnrichment(k, n, frac) {
-  if (!n || !(frac > 0 && frac < 1)) return null;
-  const p = binomSF(k, n, frac);
-  return { k, n, frac, ratio: k / n / frac, p, log10p: -Math.log10(Math.max(p, 1e-300)) };
+// Residue-level P/LP enrichment in a set of `nSet` of the protein's `L` residues, given k of
+// its n P/LP residues fall in the set: one-sided Fisher's exact (hypergeometric), as the headline.
+export function plpEnrichment(k, n, nSet, L) {
+  if (!n || !(nSet > 0 && nSet < L)) return null;
+  const p = hypergeomSF(k, L, nSet, n);
+  return { k, n, frac: nSet / L, ratio: k / n / (nSet / L), p, log10p: -Math.log10(Math.max(p, 1e-300)) };
 }
 
 export const neglog10 = (p) => (p == null ? null : -Math.log10(Math.max(p, 1e-300)));

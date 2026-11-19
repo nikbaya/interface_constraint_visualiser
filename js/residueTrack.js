@@ -374,7 +374,7 @@ export function renderTrack(container, prot) {
         `<span class="muted">90% CI</span> ${fmt2(t.ci90[0])}–${fmt2(t.ci90[1])} <span class="muted">· 95% CI</span> ${fmt2(t.ci95[0])}–${fmt2(t.ci95[1])}`;
     if (f) {
       const or = inside ? f.or : f.or == null ? null : f.or === Infinity ? 0 : f.or === 0 ? Infinity : 1 / f.or;
-      h += `<br><span class="muted">ClinVar alleles:</span> <span style="color:${PLP}">${t.P} P/LP</span> · <span style="color:${BLB}">${t.B} B/LB</span> <span class="muted">(${inside ? "outside" : "selection"}: ${o.P} · ${o.B})</span>` +
+      h += `<br><span class="muted">ClinVar residues:</span> <span style="color:${PLP}">${t.Ponly} P/LP</span> · <span style="color:${BLB}">${t.Bonly} B/LB</span> <span class="muted">(${inside ? "outside" : "selection"}: ${o.Ponly} · ${o.Bonly}${selStats.mixed ? `; ${selStats.mixed} with both left out` : ""})</span>` +
         `<br><span class="muted">P/LP vs B/LB odds ratio</span> <b>${fmtOR(or)}</b> <span class="muted">(Fisher ${pretty_p(neglog10(f.p), { ns: false })})</span>`;
     }
     return h + `</div>`;
